@@ -36,4 +36,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Backend folder (excluded from frontend repo)
+backend/
+
 app-example
