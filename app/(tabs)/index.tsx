@@ -1,12 +1,14 @@
 import { LuxuryColors } from '@/constants/Colors';
-import { AIResult, ApiService, NightData } from '@/services/api';
+import { AIResult, ApiService, NightData, SinglePriceUpdateRequest } from '@/services/api';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface DayData {
   date: string;
+  originalDate: string;
   day: string;
   currentPrice: number;
   marketPrice: number;
@@ -32,6 +34,8 @@ export default function MainScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [updatingDays, setUpdatingDays] = useState<Set<number>>(new Set());
+  const [customPrices, setCustomPrices] = useState<{ [key: number]: string }>({});
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(0)).current;
@@ -42,6 +46,125 @@ export default function MainScreen() {
         ? prev.filter(i => i !== index)
         : [...prev, index]
     );
+  };
+
+  // Handle price update for individual days
+  const handleUpdatePrice = async (dayIndex: number, useAIPrice: boolean = true) => {
+    if (!appData) return;
+    
+    const day = appData.nextFiveDays[dayIndex];
+    if (!day) return;
+    
+    // Get the price to update to
+    let priceToUpdate: number;
+    if (useAIPrice) {
+      priceToUpdate = day.suggestedPrice;
+    } else {
+      const customPrice = customPrices[dayIndex];
+      if (!customPrice || isNaN(parseFloat(customPrice))) {
+        Alert.alert('Invalid Price', 'Please enter a valid price amount.');
+        return;
+      }
+      priceToUpdate = parseFloat(customPrice);
+    }
+    
+    // Show confirmation dialog
+    const priceType = useAIPrice ? 'AI recommended' : 'custom';
+    const confirmMessage = `Update ${day.date} (${day.day}) price to $${priceToUpdate}?\n\nThis will ${priceType === 'AI recommended' ? 'use the AI recommended price' : 'set your custom price'} in PriceLabs.`;
+    
+    Alert.alert(
+      'Confirm Price Update',
+      confirmMessage,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Update Price', 
+          style: 'default',
+          onPress: () => performPriceUpdate(dayIndex, priceToUpdate, day.date)
+        }
+      ]
+    );
+  };
+  
+  // Perform the actual price update
+  const performPriceUpdate = async (dayIndex: number, price: number, originalDate: string) => {
+    try {
+      // Add to updating set
+      setUpdatingDays(prev => new Set(prev).add(dayIndex));
+      
+      // Use the original API date format directly
+      const day = appData?.nextFiveDays[dayIndex];
+      if (!day) throw new Error('Day data not found');
+      
+      const apiDate = day.originalDate; // Use stored original date
+      
+      console.log(`🔄 Updating price for ${day.date} (API date: ${apiDate}) to $${price}`);
+      
+      const updateRequest: SinglePriceUpdateRequest = {
+        date: apiDate,
+        price: price,
+        price_type: 'fixed',
+        currency: 'USD',
+        update_children: false
+      };
+      
+      const result = await ApiService.updateSinglePrice(updateRequest);
+      
+      if (result.success) {
+        Alert.alert(
+          'Success!',
+          result.message,
+          [{ text: 'OK', onPress: () => loadData() }] // Refresh data after successful update
+        );
+        
+        // Clear custom price input
+        setCustomPrices(prev => {
+          const updated = { ...prev };
+          delete updated[dayIndex];
+          return updated;
+        });
+      } else {
+        Alert.alert(
+          'Update Failed',
+          result.message || 'Failed to update price. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+      
+    } catch (error) {
+      console.error('Error updating price:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
+      
+      // Check if it's a configuration error
+      if (errorMessage.includes('Listing ID') || errorMessage.includes('not configured')) {
+        Alert.alert(
+          'Configuration Required',
+          'Your Listing ID is not configured. Please set it up in Settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Go to Settings', 
+              style: 'default',
+              onPress: () => router.push('/settings')
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          errorMessage,
+          [{ text: 'OK' }]
+        );
+      }
+    } finally {
+      // Remove from updating set
+      setUpdatingDays(prev => {
+        const updated = new Set(prev);
+        updated.delete(dayIndex);
+        return updated;
+      });
+    }
   };
 
   // Transform backend data to UI format
@@ -65,13 +188,15 @@ export default function MainScreen() {
         ? `${suggestedPrice > currentNightPrice ? '+' : ''}${Math.round(((suggestedPrice - currentNightPrice) / currentNightPrice) * 100)}%`
         : "0%";
       
-      // Format date
-      const dateObj = new Date(night.date);
+      // Format date - Fix timezone issue by parsing manually
+      const [year, month, day] = night.date.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day); // month is 0-indexed in JS Date
       const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
       const dayNumber = dateObj.getDate();
       
       return {
         date: `${dateObj.toLocaleDateString('en-US', { month: 'short' })} ${dayNumber}`,
+        originalDate: night.date,
         day: dayName,
         currentPrice: currentNightPrice,
         marketPrice: night.market_avg_price || avgMarketPrice,
@@ -193,12 +318,13 @@ export default function MainScreen() {
       
     } catch (err) {
       console.error('❌ Error loading data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load data');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load data';
+      setError(errorMessage);
       
-      // Show user-friendly error
+      // Show the actual error message from the API
       Alert.alert(
         'Unable to Load Data',
-        'Could not connect to pricing service. Please check your internet connection and try again.',
+        errorMessage,
         [{ text: 'OK' }]
       );
     } finally {
@@ -371,7 +497,7 @@ export default function MainScreen() {
             <Text style={styles.appName}>mAIrble</Text>
             <Text style={styles.propertyLocation}>{data.propertyName} • {data.location}</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
+          <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/settings')}>
             <Text style={styles.profileInitial}>B</Text>
           </TouchableOpacity>
         </View>
@@ -384,9 +510,6 @@ export default function MainScreen() {
           >
           <View style={styles.pricingHeader}>
             <Text style={styles.pricingTitle}>Current Rate</Text>
-            <View style={styles.potentialTag}>
-              <Text style={styles.potentialText}>{data.totalIncrease} potential</Text>
-            </View>
           </View>
           <View style={styles.pricingGrid}>
             <View style={styles.priceItem}>
@@ -516,6 +639,80 @@ export default function MainScreen() {
                   <View style={styles.statItem}>
                     <Text style={[styles.statValue, styles.suggestedStat]}>${day.suggestedPrice}</Text>
                     <Text style={[styles.statLabel, styles.suggestedStatLabel]}>AI Suggests</Text>
+                  </View>
+                </View>
+
+                {/* Price Update Actions */}
+                <View style={styles.updateSection}>
+                  <Text style={styles.updateSectionTitle}>Update Price</Text>
+                  
+                  {/* AI Recommended Price Button */}
+                  <TouchableOpacity 
+                    style={[
+                      styles.updateButton, 
+                      styles.aiUpdateButton,
+                      updatingDays.has(index) && styles.updateButtonDisabled
+                    ]}
+                    onPress={() => handleUpdatePrice(index, true)}
+                    disabled={updatingDays.has(index)}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient 
+                      colors={LuxuryColors.moneyGoldGradient as any}
+                      style={styles.updateButtonGradient}
+                    >
+                      <Ionicons 
+                        name="sparkles" 
+                        size={16} 
+                        color={LuxuryColors.secondary} 
+                        style={styles.updateButtonIcon}
+                      />
+                      <Text style={[styles.updateButtonText, styles.aiUpdateButtonText]}>
+                        {updatingDays.has(index) ? 'Updating...' : `Use AI Price ($${day.suggestedPrice})`}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  {/* Custom Price Input and Button */}
+                  <View style={styles.customPriceContainer}>
+                    <TextInput
+                      style={[
+                        styles.customPriceInput,
+                        updatingDays.has(index) && styles.customPriceInputDisabled
+                      ]}
+                      placeholder="Enter custom price"
+                      placeholderTextColor={LuxuryColors.textLight}
+                      value={customPrices[index] || ''}
+                      onChangeText={(text) => setCustomPrices(prev => ({ ...prev, [index]: text }))}
+                      keyboardType="numeric"
+                      editable={!updatingDays.has(index)}
+                    />
+                    <TouchableOpacity 
+                      style={[
+                        styles.updateButton,
+                        styles.customUpdateButton,
+                        updatingDays.has(index) && styles.updateButtonDisabled,
+                        (!customPrices[index] || isNaN(parseFloat(customPrices[index]))) && styles.updateButtonDisabled
+                      ]}
+                      onPress={() => handleUpdatePrice(index, false)}
+                      disabled={updatingDays.has(index) || !customPrices[index] || isNaN(parseFloat(customPrices[index]))}
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient 
+                        colors={LuxuryColors.darkEliteGradient as any}
+                        style={styles.updateButtonGradient}
+                      >
+                        <Ionicons 
+                          name="create" 
+                          size={16} 
+                          color={LuxuryColors.accent} 
+                          style={styles.updateButtonIcon}
+                        />
+                        <Text style={[styles.updateButtonText, styles.customUpdateButtonText]}>
+                          {updatingDays.has(index) ? 'Updating...' : 'Use Custom Price'}
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
                   </View>
                 </View>
                 </LinearGradient>
@@ -708,20 +905,7 @@ const styles = StyleSheet.create({
   pricingTitle: {
     fontSize: 20,
     fontFamily: 'Manrope-Bold',
-    color: LuxuryColors.secondary,
-  },
-  potentialTag: {
-    backgroundColor: `${LuxuryColors.success}25`,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: `${LuxuryColors.success}40`,
-  },
-  potentialText: {
-    fontSize: 13,
-    fontFamily: 'Manrope-SemiBold',
-    color: LuxuryColors.success,
+        color: LuxuryColors.secondary,
   },
   pricingGrid: {
     flexDirection: 'row',
@@ -1000,5 +1184,82 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 12,
     marginTop: 4,
+  },
+  updateSection: {
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 16,
+    marginBottom: 20,
+    backgroundColor: LuxuryColors.surface,
+  },
+  updateSectionTitle: {
+    fontSize: 18,
+    fontFamily: 'Manrope-Bold',
+    color: LuxuryColors.primary,
+    marginBottom: 16,
+  },
+  updateButton: {
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: LuxuryColors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  updateButtonDisabled: {
+    opacity: 0.6,
+  },
+  aiUpdateButton: {
+    // Style applied via LinearGradient
+  },
+  customUpdateButton: {
+    // Style applied via LinearGradient
+    marginBottom: 0,
+    height: 48,
+  },
+  customPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  customPriceInput: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: LuxuryColors.border,
+    backgroundColor: LuxuryColors.surface,
+    color: LuxuryColors.text,
+    fontSize: 16,
+    fontFamily: 'Manrope-Medium',
+    height: 48,
+  },
+  customPriceInputDisabled: {
+    backgroundColor: LuxuryColors.surfaceDark,
+    opacity: 0.6,
+  },
+  updateButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    minWidth: 120,
+  },
+  updateButtonIcon: {
+    marginRight: 8,
+  },
+  updateButtonText: {
+    fontSize: 14,
+    fontFamily: 'Manrope-SemiBold',
+  },
+  aiUpdateButtonText: {
+    color: LuxuryColors.secondary,
+  },
+  customUpdateButtonText: {
+    color: LuxuryColors.accent,
   },
 });

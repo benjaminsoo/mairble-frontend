@@ -1,4 +1,6 @@
 // Simple API service for mAIrble backend
+import { SecureStorageService } from './storage';
+
 // Backend URLs in priority order
 const POSSIBLE_BACKEND_URLS = [
   'https://web-production-31791.up.railway.app',  // Production Railway deployment
@@ -35,6 +37,21 @@ export interface AIResult {
   insight_tag?: string;
 }
 
+export interface SinglePriceUpdateRequest {
+  date: string;
+  price: number;
+  price_type?: 'fixed' | 'percent';
+  currency?: string;
+  update_children?: boolean;
+}
+
+export interface SinglePriceUpdateResponse {
+  success: boolean;
+  message: string;
+  updated_date?: string;
+  error_details?: string;
+}
+
 export class ApiService {
   // Test connectivity and find working backend URL
   private static async findWorkingBackendUrl(): Promise<string> {
@@ -62,23 +79,56 @@ export class ApiService {
     throw new Error('Could not connect to backend server. Please make sure it is running on one of the expected ports.');
   }
 
+  private static async getApiConfig() {
+    const config = await SecureStorageService.getApiConfig();
+    if (!config?.priceLabs?.apiKey) {
+      throw new Error('PriceLabs API key not configured. Please set up your API key first.');
+    }
+    return config;
+  }
+
   static async fetchPricingData(): Promise<NightData[]> {
     try {
       console.log('🔄 Fetching pricing data from backend...');
       
+      // Get API configuration
+      const config = await this.getApiConfig();
+      
       // First, ensure we can connect to the backend
       await this.findWorkingBackendUrl();
       
+      const requestBody = {
+        api_key: config.priceLabs.apiKey,
+        listing_id: config.priceLabs.listingId,
+        pms: config.priceLabs.pms || 'airbnb'
+      };
+
+      console.log('📤 Sending request with user API key:', {
+        ...requestBody,
+        api_key: `${requestBody.api_key.substring(0, 10)}...` // Log only first 10 chars
+      });
+
       const response = await fetch(`${API_BASE_URL}/fetch-pricing-data`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({})  // Empty body - backend will use defaults
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        let errorMessage = 'Failed to fetch pricing data';
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch {
+          // If JSON parsing fails, use generic message
+          errorMessage = await response.text() || errorMessage;
+        }
+        
+        console.error('❌ API Error:', response.status, errorMessage);
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -87,6 +137,12 @@ export class ApiService {
       
     } catch (error) {
       console.error('❌ Error fetching pricing data:', error);
+      
+      // Check if it's an API configuration error
+      if (error instanceof Error && error.message.includes('not configured')) {
+        throw new Error('API key not configured. Please set up your PriceLabs API key in the app settings.');
+      }
+      
       throw error;
     }
   }
@@ -95,6 +151,7 @@ export class ApiService {
     try {
       console.log('🤖 Starting AI analysis...');
       console.log(`📊 Analyzing ${nights.length} nights:`, nights.map(n => `${n.date}: $${n.your_price} vs $${n.market_avg_price}`));
+      
       // Ensure we're using the working backend URL
       if (!API_BASE_URL) {
         await this.findWorkingBackendUrl();
@@ -157,10 +214,23 @@ export class ApiService {
       
       console.log(`🔗 Using backend URL: ${API_BASE_URL}`);
       
+      // Get property context for personalized responses
+      const { SecureStorageService } = await import('./storage');
+      const propertyContext = await SecureStorageService.getPropertyContext();
+      
       const requestBody = {
         message: message,
-        conversation_id: conversationId
+        conversation_id: conversationId,
+        property_context: propertyContext ? {
+          guestProfile: propertyContext.guestProfile,
+          competitiveAdvantage: propertyContext.competitiveAdvantage,
+          bookingPatterns: propertyContext.bookingPatterns
+        } : null
       };
+      
+      if (propertyContext) {
+        console.log('📝 Including property context in chat request');
+      }
       
       const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
@@ -190,6 +260,117 @@ export class ApiService {
       
     } catch (error) {
       console.error('❌ CRITICAL ERROR in chat:', error);
+      console.error('❌ Error details:', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  // Utility method to check if API is configured
+  static async isApiConfigured(): Promise<boolean> {
+    try {
+      const config = await SecureStorageService.getApiConfig();
+      return !!(config?.priceLabs?.apiKey?.trim());
+    } catch (error) {
+      return false;
+    }
+  }
+
+  // Utility method to get current API configuration status
+  static async getApiStatus(): Promise<{ configured: boolean; hasListingId: boolean; pms: string | null }> {
+    try {
+      const config = await SecureStorageService.getApiConfig();
+      return {
+        configured: !!(config?.priceLabs?.apiKey?.trim()),
+        hasListingId: !!(config?.priceLabs?.listingId?.trim()),
+        pms: config?.priceLabs?.pms || null
+      };
+    } catch (error) {
+      return { configured: false, hasListingId: false, pms: null };
+    }
+  }
+
+  // Update price for a single date with explicit user control
+  static async updateSinglePrice(request: SinglePriceUpdateRequest): Promise<SinglePriceUpdateResponse> {
+    try {
+      console.log(`🔄 Updating price for ${request.date} to $${request.price}...`);
+      
+      // Get API configuration
+      const config = await this.getApiConfig();
+      
+      // Validate required configuration
+      if (!config.priceLabs.listingId) {
+        throw new Error('Listing ID not configured. Please set up your Listing ID in the app settings.');
+      }
+      
+      // Ensure we're using the working backend URL
+      if (!API_BASE_URL) {
+        await this.findWorkingBackendUrl();
+      }
+      
+      const requestBody = {
+        api_key: config.priceLabs.apiKey,
+        listing_id: config.priceLabs.listingId,
+        pms: config.priceLabs.pms || 'airbnb',
+        date: request.date,
+        price: request.price,
+        price_type: request.price_type || 'fixed',
+        currency: request.currency || 'USD',
+        update_children: request.update_children || false,
+        reason: 'Manual update via mAIrble'
+      };
+
+      // Additional validation before sending
+      if (!requestBody.listing_id) {
+        throw new Error('Listing ID is required but not configured. Please check your app settings.');
+      }
+
+      console.log('📤 Sending single price update request:', {
+        ...requestBody,
+        api_key: `${requestBody.api_key.substring(0, 10)}...`, // Log only first 10 chars
+        listing_id: requestBody.listing_id ? `${requestBody.listing_id.substring(0, 8)}...` : 'MISSING'
+      });
+
+      const response = await fetch(`${API_BASE_URL}/update-single-price`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log(`📥 Single price update response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Single price update failed with ${response.status}:`, errorText);
+        
+        // Parse error for better user messages
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.detail && Array.isArray(errorData.detail)) {
+            const missingFields = errorData.detail
+              .filter((err: any) => err.type === 'missing')
+              .map((err: any) => err.loc[err.loc.length - 1]);
+            
+            if (missingFields.includes('listing_id')) {
+              throw new Error('Listing ID is missing. Please configure your Listing ID in app settings.');
+            }
+          }
+        } catch (parseError) {
+          // If we can't parse the error, use the original
+        }
+        
+        throw new Error(`Failed to update price: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Single price update completed!');
+      console.log(`📊 Update result:`, data);
+      
+      return data;
+      
+    } catch (error) {
+      console.error('❌ CRITICAL ERROR in single price update:', error);
       console.error('❌ Error details:', error instanceof Error ? error.message : String(error));
       throw error;
     }

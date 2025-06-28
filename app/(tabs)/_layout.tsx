@@ -1,10 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { LuxuryColors } from '@/constants/Colors';
+import { useApiSetupNavigation } from '@/hooks/useApiSetup';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Custom 3D Tab Bar Background
@@ -77,6 +79,32 @@ function CustomTabBarBackground() {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { isConfigured, isLoading } = useApiSetupNavigation();
+
+  // Show loading state while checking API configuration
+  if (isLoading) {
+    return (
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: LuxuryColors.background
+      }}>
+        <Text style={{ 
+          color: LuxuryColors.text,
+          fontSize: 16,
+          fontFamily: 'Manrope-Medium'
+        }}>
+          Loading...
+        </Text>
+      </View>
+    );
+  }
+
+  // Only render tabs if API is configured (otherwise hook will navigate to setup)
+  if (!isConfigured) {
+    return null; // Navigation will happen via the hook
+  }
 
   return (
     <Tabs
