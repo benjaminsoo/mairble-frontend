@@ -1,9 +1,10 @@
 import { LuxuryColors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
+import { SecureStorageService } from '@/services/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Message {
   id: string;
@@ -24,6 +25,94 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string>();
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Load persisted conversation ID and history on component mount
+  useEffect(() => {
+    loadConversationState();
+  }, []);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
+  const loadConversationState = async () => {
+    try {
+      setIsLoadingHistory(true);
+      
+      // Try to load the last conversation ID from storage
+      const lastConversationId = await SecureStorageService.getItem('lastConversationId');
+      
+      if (lastConversationId) {
+        console.log('📖 Loading conversation history for:', lastConversationId);
+        
+        try {
+          const conversationHistory = await ApiService.getConversationHistory(lastConversationId);
+          
+          // Convert backend messages to frontend format
+          const backendMessages = conversationHistory.messages.map((msg, index) => ({
+            id: `${msg.timestamp.getTime()}_${index}`,
+            text: msg.content,
+            isUser: msg.role === 'user',
+            timestamp: msg.timestamp
+          }));
+          
+          if (backendMessages.length > 0) {
+            // Replace the default welcome message with conversation history
+            setMessages(backendMessages);
+            setConversationId(lastConversationId);
+            console.log('✅ Loaded conversation history:', backendMessages.length, 'messages');
+          }
+        } catch (error) {
+          console.log('⚠️ Could not load conversation history, starting fresh:', error);
+          // If conversation history fails to load, start fresh (keep default welcome message)
+          await SecureStorageService.removeItem('lastConversationId');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading conversation state:', error);
+      // Continue with default state if loading fails
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  const saveConversationId = async (convId: string) => {
+    try {
+      await SecureStorageService.setItem('lastConversationId', convId);
+      console.log('💾 Saved conversation ID:', convId);
+    } catch (error) {
+      console.error('❌ Error saving conversation ID:', error);
+    }
+  };
+
+  const startNewConversation = async () => {
+    try {
+      // Clear conversation state
+      setConversationId(undefined);
+      await SecureStorageService.removeItem('lastConversationId');
+      
+      // Reset to default welcome message
+      setMessages([
+        {
+          id: '1',
+          text: "Hello! I'm your AI property assistant. I can help you with pricing strategies, guest management, and property optimization. What would you like to discuss?",
+          isUser: false,
+          timestamp: new Date()
+        }
+      ]);
+      
+      console.log('🆕 Started new conversation');
+    } catch (error) {
+      console.error('❌ Error starting new conversation:', error);
+    }
+  };
 
   const sendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
@@ -36,13 +125,18 @@ export default function ChatScreen() {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const messageText = inputText;
     setInputText('');
     setIsLoading(true);
 
     try {
-      const { response, conversationId: newConversationId } = await ApiService.chatWithAI(inputText, conversationId);
+      const { response, conversationId: newConversationId } = await ApiService.chatWithAI(messageText, conversationId);
       
-      setConversationId(newConversationId);
+      // Update conversation ID if this is a new conversation
+      if (!conversationId && newConversationId) {
+        setConversationId(newConversationId);
+        await saveConversationId(newConversationId);
+      }
       
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -66,6 +160,53 @@ export default function ChatScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const showConversationOptions = () => {
+    Alert.alert(
+      'Conversation Options',
+      'Choose an action for your conversation:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'New Conversation', 
+          style: 'default',
+          onPress: startNewConversation
+        },
+        {
+          text: 'Clear History',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Clear History',
+              'This will permanently delete this conversation. Are you sure?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (conversationId) {
+                      try {
+                        await ApiService.deleteConversation(conversationId);
+                        await startNewConversation();
+                        console.log('🗑️ Conversation deleted and reset');
+                      } catch (error) {
+                        console.error('❌ Error deleting conversation:', error);
+                        // Still reset locally even if backend deletion fails
+                        await startNewConversation();
+                      }
+                    } else {
+                      await startNewConversation();
+                    }
+                  }
+                }
+              ]
+            );
+          }
+        }
+      ]
+    );
   };
 
   const renderMessage = (message: Message) => (
@@ -100,10 +241,19 @@ export default function ChatScreen() {
             <View style={styles.headerIcon}>
               <Ionicons name="chatbubbles" size={24} color={LuxuryColors.accent} />
             </View>
-            <View>
+            <View style={styles.headerTextContainer}>
               <Text style={styles.headerTitle}>AI Assistant</Text>
-              <Text style={styles.headerSubtitle}>Property management expert</Text>
+              <Text style={styles.headerSubtitle}>
+                {isLoadingHistory ? 'Loading conversation...' : 'Property management expert'}
+              </Text>
             </View>
+            <TouchableOpacity 
+              style={styles.menuButton}
+              onPress={showConversationOptions}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="ellipsis-vertical" size={20} color={LuxuryColors.textSecondary} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -114,10 +264,18 @@ export default function ChatScreen() {
         >
           {/* Messages */}
           <ScrollView 
+            ref={scrollViewRef}
             style={styles.messagesContainer}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.messagesContent}
           >
+            {isLoadingHistory && (
+              <View style={styles.loadingHistoryContainer}>
+                <Ionicons name="hourglass-outline" size={16} color={LuxuryColors.textSecondary} />
+                <Text style={styles.loadingHistoryText}>Loading conversation history...</Text>
+              </View>
+            )}
+            
             {messages.map(renderMessage)}
             
             {isLoading && (
@@ -138,27 +296,29 @@ export default function ChatScreen() {
               colors={LuxuryColors.darkEliteGradient as any}
               style={styles.inputGradient}
             >
-                             <TextInput
-                 style={styles.textInput}
-                 value={inputText}
-                 onChangeText={setInputText}
-                 placeholder="Ask about pricing, guests, optimization..."
-                 placeholderTextColor={LuxuryColors.textSecondary}
-                 multiline
-                 maxLength={500}
-                 editable={!isLoading}
-                 textAlignVertical="center"
-               />
+              <TextInput
+                style={styles.textInput}
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Ask about pricing, guests, optimization..."
+                placeholderTextColor={LuxuryColors.textSecondary}
+                multiline
+                maxLength={500}
+                editable={!isLoading && !isLoadingHistory}
+                textAlignVertical="center"
+                onSubmitEditing={sendMessage}
+                blurOnSubmit={false}
+              />
               <TouchableOpacity 
-                style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+                style={[styles.sendButton, (!inputText.trim() || isLoading || isLoadingHistory) && styles.sendButtonDisabled]}
                 onPress={sendMessage}
-                disabled={!inputText.trim() || isLoading}
+                disabled={!inputText.trim() || isLoading || isLoadingHistory}
                 activeOpacity={0.7}
               >
                 <Ionicons 
                   name="send" 
                   size={20} 
-                  color={(!inputText.trim() || isLoading) ? LuxuryColors.textLight : LuxuryColors.accent} 
+                  color={(!inputText.trim() || isLoading || isLoadingHistory) ? LuxuryColors.textLight : LuxuryColors.accent} 
                 />
               </TouchableOpacity>
             </LinearGradient>
@@ -204,6 +364,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 16,
   },
+  headerTextContainer: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 24,
     fontFamily: 'Inter-Bold',
@@ -215,6 +378,14 @@ const styles = StyleSheet.create({
     color: LuxuryColors.textSecondary,
     marginTop: 2,
   },
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(184, 134, 11, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   chatContainer: {
     flex: 1,
   },
@@ -224,6 +395,18 @@ const styles = StyleSheet.create({
   messagesContent: {
     padding: 20,
     paddingBottom: 40,
+  },
+  loadingHistoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    gap: 8,
+  },
+  loadingHistoryText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.textSecondary,
   },
   messageContainer: {
     marginBottom: 16,

@@ -25,6 +25,48 @@ const STORAGE_KEYS = {
 
 export class SecureStorageService {
   /**
+   * Generic method to store any string value securely
+   */
+  static async setItem(key: string, value: string): Promise<void> {
+    try {
+      await SecureStore.setItemAsync(key, value);
+      console.log(`✅ Stored item with key: ${key}`);
+    } catch (error) {
+      console.error(`❌ Failed to store item with key ${key}:`, error);
+      throw new Error(`Failed to store item: ${key}`);
+    }
+  }
+
+  /**
+   * Generic method to retrieve any string value securely
+   */
+  static async getItem(key: string): Promise<string | null> {
+    try {
+      const value = await SecureStore.getItemAsync(key);
+      if (value) {
+        console.log(`✅ Retrieved item with key: ${key}`);
+      }
+      return value;
+    } catch (error) {
+      console.error(`❌ Failed to retrieve item with key ${key}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Generic method to remove any stored value securely
+   */
+  static async removeItem(key: string): Promise<void> {
+    try {
+      await SecureStore.deleteItemAsync(key);
+      console.log(`✅ Removed item with key: ${key}`);
+    } catch (error) {
+      console.error(`❌ Failed to remove item with key ${key}:`, error);
+      throw new Error(`Failed to remove item: ${key}`);
+    }
+  }
+
+  /**
    * Store API configuration securely
    */
   static async storeApiConfig(config: ApiConfig): Promise<void> {

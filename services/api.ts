@@ -52,6 +52,27 @@ export interface SinglePriceUpdateResponse {
   error_details?: string;
 }
 
+// New interfaces for chat history functionality
+export interface ChatMessage {
+  role: string;  // "user" or "assistant"
+  content: string;
+  timestamp: Date;
+}
+
+export interface ConversationInfo {
+  conversation_id: string;
+  created_at: Date;
+  last_message_at: Date;
+  message_count: number;
+  property_context?: any;
+}
+
+export interface ConversationHistory {
+  conversation_id: string;
+  messages: ChatMessage[];
+  property_context?: any;
+}
+
 export class ApiService {
   // Test connectivity and find working backend URL
   private static async findWorkingBackendUrl(): Promise<string> {
@@ -206,6 +227,7 @@ export class ApiService {
     try {
       console.log('💬 Starting chat with AI...');
       console.log(`📝 Message: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`);
+      console.log(`🆔 Conversation ID: ${conversationId || 'new conversation'}`);
       
       // Ensure we're using the working backend URL
       if (!API_BASE_URL) {
@@ -214,7 +236,7 @@ export class ApiService {
       
       console.log(`🔗 Using backend URL: ${API_BASE_URL}`);
       
-      // Get property context for personalized responses
+      // Get property context for personalized responses  
       const { SecureStorageService } = await import('./storage');
       const propertyContext = await SecureStorageService.getPropertyContext();
       
@@ -261,6 +283,121 @@ export class ApiService {
     } catch (error) {
       console.error('❌ CRITICAL ERROR in chat:', error);
       console.error('❌ Error details:', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  // NEW: Get full conversation history
+  static async getConversationHistory(conversationId: string): Promise<ConversationHistory> {
+    try {
+      console.log(`📖 Retrieving conversation history: ${conversationId}`);
+      
+      // Ensure we're using the working backend URL
+      if (!API_BASE_URL) {
+        await this.findWorkingBackendUrl();
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/get-conversation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ conversation_id: conversationId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Failed to get conversation history:`, errorText);
+        throw new Error(`Failed to retrieve conversation: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Conversation history retrieved:', data.messages.length, 'messages');
+      
+      // Convert timestamp strings back to Date objects
+      const messages = data.messages.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }));
+      
+      return {
+        conversation_id: data.conversation_id,
+        messages: messages,
+        property_context: data.property_context
+      };
+      
+    } catch (error) {
+      console.error('❌ Error retrieving conversation history:', error);
+      throw error;
+    }
+  }
+
+  // NEW: List all conversations
+  static async listConversations(): Promise<ConversationInfo[]> {
+    try {
+      console.log('📋 Listing all conversations...');
+      
+      // Ensure we're using the working backend URL
+      if (!API_BASE_URL) {
+        await this.findWorkingBackendUrl();
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/conversations`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Failed to list conversations:`, errorText);
+        throw new Error(`Failed to list conversations: ${errorText}`);
+      }
+
+      const conversations = await response.json();
+      console.log('✅ Conversations listed:', conversations.length, 'conversations');
+      
+      // Convert timestamp strings back to Date objects
+      return conversations.map((conv: any) => ({
+        ...conv,
+        created_at: new Date(conv.created_at),
+        last_message_at: new Date(conv.last_message_at)
+      }));
+      
+    } catch (error) {
+      console.error('❌ Error listing conversations:', error);
+      throw error;
+    }
+  }
+
+  // NEW: Delete a conversation
+  static async deleteConversation(conversationId: string): Promise<void> {
+    try {
+      console.log(`🗑️ Deleting conversation: ${conversationId}`);
+      
+      // Ensure we're using the working backend URL
+      if (!API_BASE_URL) {
+        await this.findWorkingBackendUrl();
+      }
+      
+      const response = await fetch(`${API_BASE_URL}/conversation/${conversationId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Failed to delete conversation:`, errorText);
+        throw new Error(`Failed to delete conversation: ${errorText}`);
+      }
+
+      console.log('✅ Conversation deleted successfully');
+      
+    } catch (error) {
+      console.error('❌ Error deleting conversation:', error);
       throw error;
     }
   }

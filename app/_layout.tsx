@@ -9,7 +9,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'Inter-Regular': require('../assets/fonts/Inter_24pt-Regular.ttf'),
     'Inter-Medium': require('../assets/fonts/Inter_24pt-Medium.ttf'),
     'Inter-SemiBold': require('../assets/fonts/Inter_24pt-SemiBold.ttf'),
