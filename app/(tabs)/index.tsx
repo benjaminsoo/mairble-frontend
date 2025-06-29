@@ -384,15 +384,38 @@ export default function MainScreen() {
   // Show error state
   if (error && !appData && !loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.appName, { color: LuxuryColors.error }]}>Error</Text>
-        <Text style={styles.propertyLocation}>Unable to load pricing data</Text>
-        <TouchableOpacity 
-          style={[styles.primaryButton, { marginTop: 20, width: 200 }]} 
-          onPress={loadData}
-        >
-          <Text style={styles.primaryButtonText}>Try Again</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        <LinearGradient 
+          colors={LuxuryColors.luxuryBackgroundGradient as any}
+          style={styles.backgroundGradient}
+        />
+        <SafeAreaView style={styles.safeArea}>
+          <View style={[styles.errorContainer]}>
+            <Ionicons name="warning-outline" size={48} color={LuxuryColors.error} />
+            <Text style={[styles.appName, { color: LuxuryColors.error, marginTop: 16 }]}>Connection Error</Text>
+            <Text style={[styles.propertyLocation, { textAlign: 'center', marginHorizontal: 20 }]}>
+              Unable to load pricing data. This might be due to an invalid API key or network issue.
+            </Text>
+            
+            <View style={styles.errorButtonContainer}>
+              <TouchableOpacity 
+                style={[styles.secondaryButton, { marginBottom: 12 }]} 
+                onPress={() => router.push('/settings')}
+              >
+                <Ionicons name="settings-outline" size={20} color={LuxuryColors.accent} style={{ marginRight: 8 }} />
+                <Text style={styles.secondaryButtonText}>Go to Settings</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.secondaryButton]} 
+                onPress={loadData}
+              >
+                <Ionicons name="refresh-outline" size={20} color={LuxuryColors.accent} style={{ marginRight: 8 }} />
+                <Text style={styles.secondaryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
       </View>
     );
   }
@@ -848,7 +871,7 @@ const styles = StyleSheet.create({
   },
   refreshButtonText: {
     fontSize: 12,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.accent,
     marginLeft: 6,
   },
@@ -857,7 +880,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 32,
-    fontFamily: 'Manrope-ExtraBold',
+          fontFamily: 'Inter-ExtraBold',
     color: LuxuryColors.primary,
     marginBottom: 2,
     textShadowColor: 'rgba(212, 175, 55, 0.2)',
@@ -875,12 +898,12 @@ const styles = StyleSheet.create({
   },
   profileInitial: {
     fontSize: 18,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.secondary,
   },
   propertyLocation: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
   },
   pricingCard: {
@@ -904,7 +927,7 @@ const styles = StyleSheet.create({
   },
   pricingTitle: {
     fontSize: 20,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
         color: LuxuryColors.secondary,
   },
   pricingGrid: {
@@ -916,7 +939,7 @@ const styles = StyleSheet.create({
   },
   priceValue: {
     fontSize: 28,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.secondary,
     marginBottom: 6,
   },
@@ -926,7 +949,7 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 12,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textLight,
   },
   suggestedLabel: {
@@ -945,7 +968,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.primary,
   },
   dayContainer: {
@@ -983,14 +1006,14 @@ const styles = StyleSheet.create({
   },
   dayName: {
     fontSize: 12,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   dateNumber: {
     fontSize: 24,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.accent,
     marginTop: 2,
   },
@@ -1003,7 +1026,7 @@ const styles = StyleSheet.create({
   },
   currentPrice: {
     fontSize: 20,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     marginRight: 8,
   },
@@ -1012,7 +1035,7 @@ const styles = StyleSheet.create({
   },
   suggestedPriceHighlight: {
     fontSize: 22,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -1066,13 +1089,13 @@ const styles = StyleSheet.create({
   },
   aiTakeTitle: {
     fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.accent,
     marginLeft: 8,
   },
   aiTakeText: {
     fontSize: 15,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     lineHeight: 22,
   },
@@ -1089,7 +1112,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 20,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.primary,
     marginBottom: 4,
   },
@@ -1098,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 11,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
   },
   suggestedStatLabel: {
@@ -1123,7 +1146,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.secondary,
   },
   // Loading skeleton styles
@@ -1160,7 +1183,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     marginLeft: 12,
   },
@@ -1174,12 +1197,12 @@ const styles = StyleSheet.create({
   loadingDotsText: {
     fontSize: 18,
     color: LuxuryColors.accent,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     letterSpacing: 4,
   },
   loadingIndicatorText: {
     fontSize: 12,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textLight,
     textAlign: 'center',
     marginBottom: 12,
@@ -1194,7 +1217,7 @@ const styles = StyleSheet.create({
   },
   updateSectionTitle: {
     fontSize: 18,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.primary,
     marginBottom: 16,
   },
@@ -1233,7 +1256,7 @@ const styles = StyleSheet.create({
     backgroundColor: LuxuryColors.surface,
     color: LuxuryColors.text,
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     height: 48,
   },
   customPriceInputDisabled: {
@@ -1254,12 +1277,39 @@ const styles = StyleSheet.create({
   },
   updateButtonText: {
     fontSize: 14,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
   },
   aiUpdateButtonText: {
     color: LuxuryColors.secondary,
   },
   customUpdateButtonText: {
+    color: LuxuryColors.accent,
+  },
+  // Error state styles
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  errorButtonContainer: {
+    marginTop: 32,
+    width: '100%',
+    maxWidth: 280,
+  },
+  secondaryButton: {
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: LuxuryColors.accent,
+  },
+  secondaryButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.accent,
   },
 });

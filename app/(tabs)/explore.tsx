@@ -206,12 +206,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.primary,
   },
   headerSubtitle: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     marginTop: 2,
   },
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 16,
     lineHeight: 22,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
   },
   userText: {
     color: LuxuryColors.secondary,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: LuxuryColors.textLight,
     textAlign: 'center',
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
   },
   inputContainer: {
     paddingHorizontal: 20,
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.secondary, // Bright white/cream for typing visibility
     maxHeight: 100,
     paddingRight: 12,

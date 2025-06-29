@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 18,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.text,
   },
 }); 

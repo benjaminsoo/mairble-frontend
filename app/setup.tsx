@@ -271,14 +271,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.primary,
     marginBottom: 12,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.text,
     marginBottom: 8,
   },
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.text,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   pmsOptionText: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.text,
   },
   pmsOptionTextSelected: {
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   helpText: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     marginLeft: 8,
     flex: 1,
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 18,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.secondary,
   },
   loadingContainer: {
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
   },
 }); 

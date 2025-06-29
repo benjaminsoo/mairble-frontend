@@ -93,7 +93,7 @@ export default function TabLayout() {
         <Text style={{ 
           color: LuxuryColors.text,
           fontSize: 16,
-          fontFamily: 'Manrope-Medium'
+          fontFamily: 'Inter-Medium'
         }}>
           Loading...
         </Text>

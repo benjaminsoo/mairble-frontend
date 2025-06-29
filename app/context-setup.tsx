@@ -370,14 +370,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.primary,
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
   },
   questionCard: {
@@ -417,14 +417,14 @@ const styles = StyleSheet.create({
   },
   questionTitle: {
     fontSize: 20,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.text,
     marginBottom: 8,
     lineHeight: 28,
   },
   questionSubtitle: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     marginBottom: 20,
     lineHeight: 22,
@@ -436,14 +436,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(184, 134, 11, 0.2)',
     padding: 16,
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.text,
     minHeight: 160,
     maxHeight: 200,
   },
   characterCount: {
     fontSize: 12,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textLight,
     textAlign: 'right',
     marginTop: 8,
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.text,
   },
   nextButton: {
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.secondary,
   },
   skipButton: {
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
   },
 }); 

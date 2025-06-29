@@ -10,11 +10,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'Manrope-Regular': require('../assets/fonts/Manrope-Regular.ttf'),
-    'Manrope-Medium': require('../assets/fonts/Manrope-Medium.ttf'),
-    'Manrope-SemiBold': require('../assets/fonts/Manrope-SemiBold.ttf'),
-    'Manrope-Bold': require('../assets/fonts/Manrope-Bold.ttf'),
-    'Manrope-ExtraBold': require('../assets/fonts/Manrope-ExtraBold.ttf'),
+    'Inter-Regular': require('../assets/fonts/Inter_24pt-Regular.ttf'),
+    'Inter-Medium': require('../assets/fonts/Inter_24pt-Medium.ttf'),
+    'Inter-SemiBold': require('../assets/fonts/Inter_24pt-SemiBold.ttf'),
+    'Inter-Bold': require('../assets/fonts/Inter_24pt-Bold.ttf'),
+    'Inter-ExtraBold': require('../assets/fonts/Inter_24pt-ExtraBold.ttf'),
+    'Inter-Light': require('../assets/fonts/Inter_24pt-Light.ttf'),
   });
 
   if (!loaded) {

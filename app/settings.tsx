@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.primary,
     marginLeft: 8,
   },
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     lineHeight: 24,
   },
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   },
   statusTitle: {
     fontSize: 18,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.text,
     marginLeft: 8,
   },
@@ -494,12 +494,12 @@ const styles = StyleSheet.create({
   },
   statusLabel: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
   },
   statusValue: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.text,
     flex: 1,
     textAlign: 'right',
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontSize: 20,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.secondary,
     marginBottom: 20,
   },
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.secondary,
     marginBottom: 8,
   },
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.secondary,
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   },
   pmsOptionText: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.secondary,
   },
   pmsOptionTextSelected: {
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 18,
-    fontFamily: 'Manrope-Bold',
+    fontFamily: 'Inter-Bold',
     color: LuxuryColors.secondary,
   },
   secondaryButton: {
@@ -612,7 +612,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
   },
   helpContainer: {
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   },
   helpText: {
     fontSize: 14,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     marginLeft: 8,
     flex: 1,
@@ -647,13 +647,13 @@ const styles = StyleSheet.create({
   },
   contextTitle: {
     fontSize: 18,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.text,
     marginLeft: 8,
   },
   contextDescription: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
     lineHeight: 22,
     marginBottom: 16,
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
   },
   contextButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-SemiBold',
+    fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.secondary,
   },
   contextButtonTextSecondary: {
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     fontSize: 16,
-    fontFamily: 'Manrope-Medium',
+    fontFamily: 'Inter-Medium',
     color: '#ff6b6b',
   },
 }); 
