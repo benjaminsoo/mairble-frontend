@@ -168,6 +168,69 @@ export class ApiService {
     }
   }
 
+  // New method for custom date range pricing data
+  static async fetchCustomRangePricingData(dateFrom: string, dateTo: string): Promise<NightData[]> {
+    try {
+      console.log(`🔄 Fetching custom range pricing data from ${dateFrom} to ${dateTo}...`);
+      
+      // Get API configuration
+      const config = await this.getApiConfig();
+      
+      // First, ensure we can connect to the backend
+      await this.findWorkingBackendUrl();
+      
+      const requestBody = {
+        api_key: config.priceLabs.apiKey,
+        listing_id: config.priceLabs.listingId,
+        pms: config.priceLabs.pms || 'airbnb',
+        date_from: dateFrom,
+        date_to: dateTo
+      };
+
+      console.log('📤 Sending custom range request:', {
+        ...requestBody,
+        api_key: `${requestBody.api_key.substring(0, 10)}...` // Log only first 10 chars
+      });
+
+      const response = await fetch(`${API_BASE_URL}/fetch-pricing-data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        let errorMessage = 'Failed to fetch custom range pricing data';
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorMessage;
+        } catch {
+          // If JSON parsing fails, use generic message
+          errorMessage = await response.text() || errorMessage;
+        }
+        
+        console.error('❌ Custom range API Error:', response.status, errorMessage);
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      console.log('✅ Custom range pricing data received:', data.length, 'nights');
+      return data;
+      
+    } catch (error) {
+      console.error('❌ Error fetching custom range pricing data:', error);
+      
+      // Check if it's an API configuration error
+      if (error instanceof Error && error.message.includes('not configured')) {
+        throw new Error('API key not configured. Please set up your PriceLabs API key in the app settings.');
+      }
+      
+      throw error;
+    }
+  }
+
   static async analyzeWithAI(nights: NightData[]): Promise<AIResult[]> {
     try {
       console.log('🤖 Starting AI analysis...');
@@ -244,9 +307,9 @@ export class ApiService {
         message: message,
         conversation_id: conversationId,
         property_context: propertyContext ? {
-          guestProfile: propertyContext.guestProfile,
-          competitiveAdvantage: propertyContext.competitiveAdvantage,
-          bookingPatterns: propertyContext.bookingPatterns
+          mainGuest: propertyContext.mainGuest,
+          specialFeature: propertyContext.specialFeature,
+          pricingGoal: propertyContext.pricingGoal
         } : null
       };
       

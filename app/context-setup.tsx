@@ -12,15 +12,14 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
 
 export default function ContextSetupScreen() {
-  const [guestProfile, setGuestProfile] = useState('');
-  const [competitiveAdvantage, setCompetitiveAdvantage] = useState('');
-  const [bookingPatterns, setBookingPatterns] = useState('');
+  const [mainGuest, setMainGuest] = useState('');
+  const [specialFeature, setSpecialFeature] = useState<string[]>([]);
+  const [pricingGoal, setPricingGoal] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isEditing, setIsEditing] = useState(false);
@@ -33,9 +32,9 @@ export default function ContextSetupScreen() {
     try {
       const existingContext = await SecureStorageService.getPropertyContext();
       if (existingContext) {
-        setGuestProfile(existingContext.guestProfile);
-        setCompetitiveAdvantage(existingContext.competitiveAdvantage);
-        setBookingPatterns(existingContext.bookingPatterns);
+        setMainGuest(existingContext.mainGuest);
+        setSpecialFeature(existingContext.specialFeature || []);
+        setPricingGoal(existingContext.pricingGoal || []);
         setIsEditing(true);
       }
     } catch (error) {
@@ -61,7 +60,7 @@ export default function ContextSetupScreen() {
     if (loading) return;
 
     // Validate all answers are provided
-    if (!guestProfile.trim() || !competitiveAdvantage.trim() || !bookingPatterns.trim()) {
+    if (!mainGuest.trim() || specialFeature.length === 0 || pricingGoal.length === 0) {
       Alert.alert('Missing Information', 'Please answer all 3 questions to continue.');
       return;
     }
@@ -70,9 +69,9 @@ export default function ContextSetupScreen() {
 
     try {
       const context: PropertyContext = {
-        guestProfile: guestProfile.trim(),
-        competitiveAdvantage: competitiveAdvantage.trim(),
-        bookingPatterns: bookingPatterns.trim(),
+        mainGuest: mainGuest.trim(),
+        specialFeature: specialFeature,
+        pricingGoal: pricingGoal,
         createdAt: new Date().toISOString(),
       };
 
@@ -119,33 +118,131 @@ export default function ContextSetupScreen() {
     );
   };
 
+  const renderSingleSelectOption = (value: string, selectedValue: string, onSelect: (value: string) => void, label: string, description?: string) => (
+    <TouchableOpacity
+      key={value}
+      style={[
+        styles.dropdownOption,
+        selectedValue === value && styles.dropdownOptionSelected
+      ]}
+      onPress={() => onSelect(value)}
+      disabled={loading}
+    >
+      <View style={styles.dropdownOptionContent}>
+        <View style={styles.dropdownOptionHeader}>
+          <View style={[
+            styles.radioButton,
+            selectedValue === value && styles.radioButtonSelected
+          ]}>
+            {selectedValue === value && <View style={styles.radioButtonInner} />}
+          </View>
+          <Text style={[
+            styles.dropdownOptionLabel,
+            selectedValue === value && styles.dropdownOptionLabelSelected
+          ]}>
+            {label}
+          </Text>
+        </View>
+        {description && (
+          <Text style={[
+            styles.dropdownOptionDescription,
+            selectedValue === value && styles.dropdownOptionDescriptionSelected
+          ]}>
+            {description}
+          </Text>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderMultiSelectOption = (value: string, selectedValues: string[], onToggle: (value: string) => void, label: string, description?: string) => {
+    const isSelected = selectedValues.includes(value);
+    
+    return (
+      <TouchableOpacity
+        key={value}
+        style={[
+          styles.dropdownOption,
+          isSelected && styles.dropdownOptionSelected
+        ]}
+        onPress={() => onToggle(value)}
+        disabled={loading}
+      >
+        <View style={styles.dropdownOptionContent}>
+          <View style={styles.dropdownOptionHeader}>
+            <View style={[
+              styles.checkboxButton,
+              isSelected && styles.checkboxButtonSelected
+            ]}>
+              {isSelected && <Ionicons name="checkmark" size={14} color={LuxuryColors.secondary} />}
+            </View>
+            <Text style={[
+              styles.dropdownOptionLabel,
+              isSelected && styles.dropdownOptionLabelSelected
+            ]}>
+              {label}
+            </Text>
+          </View>
+          {description && (
+            <Text style={[
+              styles.dropdownOptionDescription,
+              isSelected && styles.dropdownOptionDescriptionSelected
+            ]}>
+              {description}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const toggleSpecialFeature = (value: string) => {
+    setSpecialFeature(prev => 
+      prev.includes(value) 
+        ? prev.filter(item => item !== value)
+        : [...prev, value]
+    );
+  };
+
+  const togglePricingGoal = (value: string) => {
+    setPricingGoal(prev => 
+      prev.includes(value) 
+        ? prev.filter(item => item !== value)
+        : [...prev, value]
+    );
+  };
+
   const renderQuestion = () => {
     switch (currentStep) {
       case 1:
         return (
           <View style={styles.questionContainer}>
             <Text style={styles.questionTitle}>
-              Who are your typical guests and what do they love most about your place?
+              Who is your main guest?
             </Text>
-            <Text style={styles.questionSubtitle}>
-              Help the AI understand your guest demographics and unique value proposition
-            </Text>
-            <TextInput
-              style={styles.textArea}
-              value={guestProfile}
-              onChangeText={setGuestProfile}
-              placeholder="Examples:
-• Business travelers who love the downtown location and workspace
-• Bachelorette groups who come for the hot tub and can split costs  
-• Families with dogs who need the mountain access and space"
-              placeholderTextColor={LuxuryColors.textLight}
-              multiline
-              numberOfLines={8}
-              textAlignVertical="top"
-              maxLength={500}
-              editable={!loading}
-            />
-            <Text style={styles.characterCount}>{guestProfile.length}/500</Text>
+            <View style={styles.dropdownContainer}>
+              {renderSingleSelectOption(
+                'Leisure',
+                mainGuest,
+                setMainGuest,
+                'Leisure',
+                'Often book further in advance, sensitive to total cost, look for amenities and experiences. Weekends, holidays, summer are key.'
+              )}
+              {renderSingleSelectOption(
+                'Business',
+                mainGuest,
+                setMainGuest,
+                'Business',
+                'Often book last-minute, less price-sensitive, prioritize location, workspace, reliable internet. Weekdays are key.'
+              )}
+              {renderSingleSelectOption(
+                'Groups',
+                mainGuest,
+                setMainGuest,
+                'Groups',
+                'Highly sensitive to per-person cost, look for capacity and entertainment. Weekends and events are key.'
+              )}
+            </View>
           </View>
         );
       
@@ -153,27 +250,59 @@ export default function ContextSetupScreen() {
         return (
           <View style={styles.questionContainer}>
             <Text style={styles.questionTitle}>
-              What's your main competition nearby, and why do guests choose you instead?
+              What makes your property special?
             </Text>
-            <Text style={styles.questionSubtitle}>
-              This helps the AI price competitively while highlighting your advantages
-            </Text>
-            <TextInput
-              style={styles.textArea}
-              value={competitiveAdvantage}
-              onChangeText={setCompetitiveAdvantage}
-              placeholder="Examples:
-• Hampton Inn at $89/night, but we have full kitchen and more space
-• Other Airbnbs, but we're the only one with hot tub + sauna combo
-• Hotels are $120+, we're the affordable option with better amenities"
-              placeholderTextColor={LuxuryColors.textLight}
-              multiline
-              numberOfLines={8}
-              textAlignVertical="top"
-              maxLength={500}
-              editable={!loading}
-            />
-            <Text style={styles.characterCount}>{competitiveAdvantage.length}/500</Text>
+            <View style={styles.dropdownContainer}>
+              {renderMultiSelectOption(
+                'Location',
+                specialFeature,
+                toggleSpecialFeature,
+                'Location (e.g., Beachfront, Downtown, Mountain View)',
+                'Proximity to key attractions, natural beauty, or urban convenience. This is often the #1 driver for guests.'
+              )}
+              {renderMultiSelectOption(
+                'Unique Amenity',
+                specialFeature,
+                toggleSpecialFeature,
+                'Unique Amenity (e.g., Hot Tub, Pool, Sauna, Home Theater)',
+                'Specific features that are rare or highly desirable in your market, justifying a premium.'
+              )}
+              {renderMultiSelectOption(
+                'Size/Capacity',
+                specialFeature,
+                toggleSpecialFeature,
+                'Size/Capacity (e.g., Sleeps 10+, Multiple Bedrooms/Baths)',
+                'Ability to accommodate larger groups, which often means higher per-night rates and less competition.'
+              )}
+              {renderMultiSelectOption(
+                'Luxury/Design',
+                specialFeature,
+                toggleSpecialFeature,
+                'Luxury/Design (e.g., High-end finishes, Architecturally unique)',
+                'Premium aesthetic and comfort that appeals to discerning guests willing to pay more.'
+              )}
+              {renderMultiSelectOption(
+                'Pet-Friendly',
+                specialFeature,
+                toggleSpecialFeature,
+                'Pet-Friendly (with specific features like fenced yard)',
+                'Taps into a specific, often underserved market segment willing to pay a premium for their pets.'
+              )}
+              {renderMultiSelectOption(
+                'Exceptional View',
+                specialFeature,
+                toggleSpecialFeature,
+                'Exceptional View (e.g., Ocean, City Skyline, Mountain Panorama)',
+                'A visual appeal that significantly enhances the guest experience and justifies higher rates.'
+              )}
+              {renderMultiSelectOption(
+                'Unique Experience',
+                specialFeature,
+                toggleSpecialFeature,
+                'Unique Experience (e.g., Historic property, Farm stay, Glamping)',
+                'Offers something truly different that guests can\'t find elsewhere, creating strong demand.'
+              )}
+            </View>
           </View>
         );
       
@@ -181,27 +310,31 @@ export default function ContextSetupScreen() {
         return (
           <View style={styles.questionContainer}>
             <Text style={styles.questionTitle}>
-              When do you get booked up first vs struggle to fill dates?
+              What's your top pricing goal?
             </Text>
-            <Text style={styles.questionSubtitle}>
-              Understanding your seasonal patterns helps optimize pricing strategy
-            </Text>
-            <TextInput
-              style={styles.textArea}
-              value={bookingPatterns}
-              onChangeText={setBookingPatterns}
-              placeholder="Examples:
-• Weekends book months ahead, weekdays are last-minute business
-• Summer is crazy, winter slow except holidays
-• Bachelorette season (May-Sept) is gold, off-season I drop prices"
-              placeholderTextColor={LuxuryColors.textLight}
-              multiline
-              numberOfLines={8}
-              textAlignVertical="top"
-              maxLength={500}
-              editable={!loading}
-            />
-            <Text style={styles.characterCount}>{bookingPatterns.length}/500</Text>
+            <View style={styles.dropdownContainer}>
+              {renderMultiSelectOption(
+                'Fill Dates',
+                pricingGoal,
+                togglePricingGoal,
+                'Fill Dates',
+                'LLM will prioritize getting a booking, even if it means a lower price. This directly solves your "unbooked dates at $1000" problem – the LLM knows you\'d rather get $750 than $0.'
+              )}
+              {renderMultiSelectOption(
+                'Max Price',
+                pricingGoal,
+                togglePricingGoal,
+                'Max Price',
+                'LLM will push for the highest possible rate, even if it means slightly fewer bookings. It will justify this by highlighting your property\'s special features and target guest\'s willingness to pay.'
+              )}
+              {renderMultiSelectOption(
+                'Avoid Bad Guests',
+                pricingGoal,
+                togglePricingGoal,
+                'Avoid Bad Guests',
+                'LLM will recommend pricing strategies that naturally filter for higher-quality guests, even if it means leaving some money on the table or having slightly lower occupancy. It might suggest not dropping below a certain price floor.'
+              )}
+            </View>
           </View>
         );
       
@@ -213,11 +346,11 @@ export default function ContextSetupScreen() {
   const isCurrentStepValid = () => {
     switch (currentStep) {
       case 1:
-        return guestProfile.trim().length > 0;
+        return mainGuest.trim().length > 0;
       case 2:
-        return competitiveAdvantage.trim().length > 0;
+        return specialFeature.length > 0;
       case 3:
-        return bookingPatterns.trim().length > 0;
+        return pricingGoal.length > 0;
       default:
         return false;
     }
@@ -429,24 +562,82 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 22,
   },
-  textArea: {
+  dropdownContainer: {
+    gap: 12,
+  },
+  dropdownOption: {
     backgroundColor: 'rgba(184, 134, 11, 0.05)',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(184, 134, 11, 0.2)',
     padding: 16,
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.text,
-    minHeight: 160,
-    maxHeight: 200,
   },
-  characterCount: {
-    fontSize: 12,
+  dropdownOptionSelected: {
+    borderColor: LuxuryColors.accent,
+    backgroundColor: 'rgba(184, 134, 11, 0.1)',
+  },
+  dropdownOptionContent: {
+    flex: 1,
+  },
+  dropdownOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(184, 134, 11, 0.4)',
+    borderRadius: 10,
+    marginRight: 12,
+    marginTop: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: LuxuryColors.accent,
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: LuxuryColors.accent,
+  },
+  checkboxButton: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(184, 134, 11, 0.4)',
+    borderRadius: 4,
+    marginRight: 12,
+    marginTop: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxButtonSelected: {
+    borderColor: LuxuryColors.accent,
+    backgroundColor: LuxuryColors.accent,
+  },
+  dropdownOptionLabel: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: LuxuryColors.text,
+    flex: 1,
+    lineHeight: 22,
+  },
+  dropdownOptionLabelSelected: {
+    color: LuxuryColors.accent,
+  },
+  dropdownOptionDescription: {
+    fontSize: 14,
     fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textLight,
-    textAlign: 'right',
-    marginTop: 8,
+    color: LuxuryColors.textSecondary,
+    lineHeight: 20,
+    marginLeft: 32,
+  },
+  dropdownOptionDescriptionSelected: {
+    color: LuxuryColors.text,
   },
   actionsContainer: {
     gap: 16,

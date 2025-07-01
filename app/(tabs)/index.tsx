@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Calendar } from 'react-native-calendars';
 
 interface DayData {
   date: string;
@@ -28,6 +29,15 @@ interface AppData {
   nextFiveDays: DayData[];
 }
 
+// Update interface for custom time window with simpler date handling
+interface CustomTimeWindowData {
+  days: DayData[];
+  startDate: string | null; // Store as YYYY-MM-DD string
+  endDate: string | null;   // Store as YYYY-MM-DD string
+  isLoading: boolean;
+  showCalendar: boolean;
+}
+
 export default function MainScreen() {
   const [expandedDays, setExpandedDays] = useState<number[]>([]);
   const [appData, setAppData] = useState<AppData | null>(null);
@@ -35,7 +45,19 @@ export default function MainScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
   const [updatingDays, setUpdatingDays] = useState<Set<number>>(new Set());
-  const [customPrices, setCustomPrices] = useState<{ [key: number]: string }>({});
+  const [customPrices, setCustomPrices] = useState<{ [key: string]: string }>({});
+  
+  // Updated state for custom time window with calendar
+  const [customWindow, setCustomWindow] = useState<CustomTimeWindowData>({
+    days: [],
+    startDate: null,
+    endDate: null,
+    isLoading: false,
+    showCalendar: false
+  });
+  const [expandedCustomDays, setExpandedCustomDays] = useState<number[]>([]);
+  const [showCustomWindow, setShowCustomWindow] = useState(false);
+
   const shimmerAnimation = useRef(new Animated.Value(0)).current;
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const pulseAnimation = useRef(new Animated.Value(0)).current;
@@ -190,7 +212,7 @@ export default function MainScreen() {
       
       // Format date - Fix timezone issue by parsing manually
       const [year, month, day] = night.date.split('-').map(Number);
-      const dateObj = new Date(year, month - 1, day); // month is 0-indexed in JS Date
+      const dateObj = new Date(year, month - 1, day);
       const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
       const dayNumber = dateObj.getDate();
       
@@ -474,6 +496,365 @@ export default function MainScreen() {
   
   const data = appData || defaultLoadingData;
 
+  // Utility function to chunk array into smaller arrays
+  const chunkArray = <T,>(array: T[], chunkSize: number): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  };
+
+  // Batch process AI analysis for large datasets
+  const batchAnalyzeWithAI = async (nights: NightData[]): Promise<AIResult[]> => {
+    const chunks = chunkArray(nights, 5); // Max 5 days per OpenAI call
+    const allResults: AIResult[] = [];
+    
+    console.log(`🔄 Processing ${nights.length} nights in ${chunks.length} batches of max 5 days each`);
+    
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      console.log(`📊 Processing batch ${i + 1}/${chunks.length} (${chunk.length} nights)`);
+      
+      try {
+        const chunkResults = await ApiService.analyzeWithAI(chunk);
+        allResults.push(...chunkResults);
+        
+        // Add small delay between batches to be respectful to the API
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error(`❌ Error processing batch ${i + 1}:`, error);
+        // Continue with other batches even if one fails
+      }
+    }
+    
+    return allResults;
+  };
+
+  // Helper function to format date for display
+  const formatDateDisplay = (dateString: string): string => {
+    const date = new Date(dateString + 'T00:00:00'); // Avoid timezone issues
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+    });
+  };
+
+  // Get today's date in YYYY-MM-DD format
+  const getTodayString = (): string => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
+  // Get max date (90 days from today) in YYYY-MM-DD format
+  const getMaxDateString = (): string => {
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 90);
+    return maxDate.toISOString().split('T')[0];
+  };
+
+  // Validate date range
+  const validateDateRange = (startDate: string, endDate: string): { valid: boolean; message?: string } => {
+    const today = getTodayString();
+    const maxDate = getMaxDateString(); // 90 days from today
+    
+    if (startDate < today) {
+      return { valid: false, message: 'Start date cannot be in the past' };
+    }
+
+    if (endDate <= startDate) {
+      return { valid: false, message: 'End date must be after start date' };
+    }
+
+    if (endDate > maxDate) {
+      return { valid: false, message: 'End date cannot be more than 90 days from today' };
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff > 30) {
+      return { valid: false, message: 'Date range cannot exceed 30 days' };
+    }
+
+    return { valid: true };
+  };
+
+  // Handle calendar date selection
+  const handleCalendarDayPress = (day: any) => {
+    const selectedDate = day.dateString;
+    
+    if (!customWindow.startDate || (customWindow.startDate && customWindow.endDate)) {
+      // Start new selection
+      setCustomWindow(prev => ({
+        ...prev,
+        startDate: selectedDate,
+        endDate: null
+      }));
+    } else if (customWindow.startDate && !customWindow.endDate) {
+      // Complete the range
+      if (selectedDate <= customWindow.startDate) {
+        // Selected date is before start, make it the new start
+        setCustomWindow(prev => ({
+          ...prev,
+          startDate: selectedDate,
+          endDate: null
+        }));
+      } else {
+        // Valid end date
+        const validation = validateDateRange(customWindow.startDate, selectedDate);
+        if (!validation.valid) {
+          Alert.alert('Invalid Date Range', validation.message);
+          return;
+        }
+        
+        setCustomWindow(prev => ({
+          ...prev,
+          endDate: selectedDate
+        }));
+      }
+    }
+  };
+
+  // Get marked dates for calendar
+  const getMarkedDates = () => {
+    if (!customWindow.startDate) return {};
+    
+    const marked: any = {};
+    
+    if (customWindow.startDate && !customWindow.endDate) {
+      // Only start date selected
+      marked[customWindow.startDate] = {
+        selected: true,
+        selectedColor: LuxuryColors.accent,
+        selectedTextColor: LuxuryColors.surface
+      };
+    } else if (customWindow.startDate && customWindow.endDate) {
+      // Both dates selected - create range
+      const start = new Date(customWindow.startDate);
+      const end = new Date(customWindow.endDate);
+      
+      marked[customWindow.startDate] = {
+        selected: true,
+        selectedColor: LuxuryColors.accent,
+        selectedTextColor: LuxuryColors.surface
+      };
+      
+      marked[customWindow.endDate] = {
+        selected: true,
+        selectedColor: LuxuryColors.accent,
+        selectedTextColor: LuxuryColors.surface
+      };
+      
+      // Mark intermediate dates
+      const current = new Date(start);
+      current.setDate(current.getDate() + 1);
+      
+      while (current < end) {
+        const dateString = current.toISOString().split('T')[0];
+        marked[dateString] = {
+          selected: true,
+          selectedColor: LuxuryColors.accent + '40',
+          selectedTextColor: LuxuryColors.text
+        };
+        current.setDate(current.getDate() + 1);
+      }
+    }
+    
+    return marked;
+  };
+
+  // Load custom time window data with selected dates
+  const loadCustomTimeWindow = async () => {
+    if (!customWindow.startDate || !customWindow.endDate) {
+      Alert.alert('Select Date Range', 'Please select both start and end dates.');
+      return;
+    }
+
+    const validation = validateDateRange(customWindow.startDate, customWindow.endDate);
+    if (!validation.valid) {
+      Alert.alert('Invalid Date Range', validation.message);
+      return;
+    }
+
+    try {
+      setCustomWindow(prev => ({ ...prev, isLoading: true }));
+      setError(null);
+
+      const start = new Date(customWindow.startDate);
+      const end = new Date(customWindow.endDate);
+      const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+
+      console.log(`📅 Loading custom window: ${customWindow.startDate} to ${customWindow.endDate} (${daysDiff} days)`);
+
+      // Fetch pricing data for custom range
+      const nights = await ApiService.fetchCustomRangePricingData(customWindow.startDate, customWindow.endDate);
+      console.log(`📊 Retrieved ${nights.length} nights for custom window`);
+
+      if (nights.length === 0) {
+        setCustomWindow(prev => ({ ...prev, days: [], isLoading: false }));
+        Alert.alert('No Data', 'No available nights found in the selected date range.');
+        return;
+      }
+
+      // Batch process AI analysis
+      const aiResults = await batchAnalyzeWithAI(nights);
+      console.log(`🤖 Completed AI analysis for ${aiResults.length} results`);
+
+      // Transform data for UI
+      const customDays = transformNightsToCustomDays(nights, aiResults);
+      
+      setCustomWindow(prev => ({
+        ...prev,
+        days: customDays,
+        isLoading: false
+      }));
+
+      console.log(`✅ Custom window loaded successfully: ${customDays.length} days`);
+
+    } catch (error) {
+      console.error('❌ Error loading custom time window:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load custom time window');
+      setCustomWindow(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  // Clear date selection
+  const clearDateSelection = () => {
+    setCustomWindow(prev => ({
+      ...prev,
+      startDate: null,
+      endDate: null,
+      days: []
+    }));
+  };
+
+  // Transform nights data to custom days format
+  const transformNightsToCustomDays = (nights: NightData[], aiResults: AIResult[]): DayData[] => {
+    return nights.map((night, index) => {
+      const aiResult = aiResults.find(ai => ai.date === night.date);
+      const suggestedPrice = aiResult?.suggested_price || night.your_price || 450;
+      const currentNightPrice = night.your_price || 450;
+      
+      // Calculate boost percentage
+      const boost = suggestedPrice && currentNightPrice 
+        ? `${suggestedPrice > currentNightPrice ? '+' : ''}${Math.round(((suggestedPrice - currentNightPrice) / currentNightPrice) * 100)}%`
+        : "0%";
+      
+      // Format date
+      const [year, month, day] = night.date.split('-').map(Number);
+      const dateObj = new Date(year, month - 1, day);
+      const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayNumber = dateObj.getDate();
+      
+      return {
+        date: `${dateObj.toLocaleDateString('en-US', { month: 'short' })} ${dayNumber}`,
+        originalDate: night.date,
+        day: dayName,
+        currentPrice: currentNightPrice,
+        marketPrice: night.market_avg_price || 425,
+        suggestedPrice: suggestedPrice,
+        aiInsight: aiResult?.explanation || "AI analysis completed",
+        boost: boost
+      };
+    });
+  };
+
+  // Toggle custom day expansion
+  const toggleCustomDay = (index: number) => {
+    setExpandedCustomDays(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index)
+        : [...prev, index]
+    );
+  };
+
+  // Handle custom day price update
+  const handleUpdateCustomDayPrice = async (dayIndex: number, useAIPrice: boolean = true) => {
+    const day = customWindow.days[dayIndex];
+    if (!day) return;
+    
+    // Get the price to update to
+    let priceToUpdate: number;
+    if (useAIPrice) {
+      priceToUpdate = day.suggestedPrice;
+    } else {
+      const customPrice = customPrices[`custom_${dayIndex}`];
+      if (!customPrice || isNaN(parseFloat(customPrice))) {
+        Alert.alert('Invalid Price', 'Please enter a valid price amount.');
+        return;
+      }
+      priceToUpdate = parseFloat(customPrice);
+    }
+    
+    // Show confirmation dialog
+    const priceType = useAIPrice ? 'AI recommended' : 'custom';
+    const confirmMessage = `Update ${day.date} (${day.day}) price to $${priceToUpdate}?\n\nThis will ${priceType === 'AI recommended' ? 'use the AI recommended price' : 'set your custom price'} in PriceLabs.`;
+    
+    Alert.alert(
+      'Confirm Price Update',
+      confirmMessage,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Update Price', 
+          style: 'default',
+          onPress: () => performCustomDayPriceUpdate(dayIndex, priceToUpdate)
+        }
+      ]
+    );
+  };
+
+  // Perform custom day price update
+  const performCustomDayPriceUpdate = async (dayIndex: number, price: number) => {
+    try {
+      const day = customWindow.days[dayIndex];
+      if (!day) throw new Error('Day data not found');
+      
+      const updateRequest: SinglePriceUpdateRequest = {
+        date: day.originalDate,
+        price: price,
+        price_type: 'fixed',
+        currency: 'USD',
+        update_children: false
+      };
+      
+      const result = await ApiService.updateSinglePrice(updateRequest);
+      
+      if (result.success) {
+        Alert.alert(
+          'Success!',
+          result.message,
+          [{ text: 'OK', onPress: () => loadCustomTimeWindow() }]
+        );
+        
+        // Clear custom price input
+        setCustomPrices(prev => {
+          const updated = { ...prev };
+          delete updated[`custom_${dayIndex}`];
+          return updated;
+        });
+      } else {
+        Alert.alert(
+          'Update Failed',
+          result.message || 'Failed to update price. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error updating custom day price:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* High Contrast Background */}
@@ -744,6 +1125,292 @@ export default function MainScreen() {
             ))}
           </Animated.View>
         )}
+
+        {/* Updated Custom Date Range Section with Calendar */}
+        <View style={styles.customWindowSection}>
+          <View style={styles.customWindowHeader}>
+            <Text style={styles.sectionTitle}>Custom Date Range</Text>
+            <TouchableOpacity
+              style={styles.toggleButton}
+              onPress={() => setShowCustomWindow(!showCustomWindow)}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={showCustomWindow ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color={LuxuryColors.accent} 
+              />
+            </TouchableOpacity>
+          </View>
+
+          {showCustomWindow && (
+            <View style={styles.customWindowContent}>
+              {/* Date Selection Summary */}
+              <View style={styles.dateSelectionSummary}>
+                <Text style={styles.selectorLabel}>Select Date Range (max 30 days, within 90 days from today):</Text>
+                <View style={styles.selectedDatesRow}>
+                  <View style={styles.dateDisplay}>
+                    <Text style={styles.dateDisplayLabel}>From:</Text>
+                    <Text style={styles.dateDisplayValue}>
+                      {customWindow.startDate ? formatDateDisplay(customWindow.startDate) : 'Select date'}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.dateDisplay}>
+                    <Text style={styles.dateDisplayLabel}>To:</Text>
+                    <Text style={styles.dateDisplayValue}>
+                      {customWindow.endDate ? formatDateDisplay(customWindow.endDate) : 'Select date'}
+                    </Text>
+                  </View>
+                </View>
+
+                {customWindow.startDate && customWindow.endDate && (
+                  <View style={styles.dateRangeSummary}>
+                    <Text style={styles.dateRangeSummaryText}>
+                      {(() => {
+                        const start = new Date(customWindow.startDate);
+                        const end = new Date(customWindow.endDate);
+                        return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                      })()} days selected
+                    </Text>
+                    <TouchableOpacity onPress={clearDateSelection} style={styles.clearButton}>
+                      <Text style={styles.clearButtonText}>Clear</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+
+              {/* Calendar Toggle */}
+              <TouchableOpacity
+                style={styles.calendarToggleButton}
+                onPress={() => setCustomWindow(prev => ({ ...prev, showCalendar: !prev.showCalendar }))}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name="calendar" 
+                  size={18} 
+                  color={LuxuryColors.accent} 
+                />
+                <Text style={styles.calendarToggleText}>
+                  {customWindow.showCalendar ? 'Hide Calendar' : 'Select Dates'}
+                </Text>
+                <Ionicons 
+                  name={customWindow.showCalendar ? "chevron-up" : "chevron-down"} 
+                  size={16} 
+                  color={LuxuryColors.accent} 
+                />
+              </TouchableOpacity>
+
+              {/* Calendar */}
+              {customWindow.showCalendar && (
+                <View style={styles.calendarContainer}>
+                  <Calendar
+                    onDayPress={handleCalendarDayPress}
+                    markedDates={getMarkedDates()}
+                    minDate={getTodayString()}
+                    maxDate={getMaxDateString()}
+                    theme={{
+                      backgroundColor: 'transparent',
+                      calendarBackground: 'transparent',
+                      textSectionTitleColor: LuxuryColors.textSecondary,
+                      selectedDayBackgroundColor: LuxuryColors.accent,
+                      selectedDayTextColor: LuxuryColors.surface,
+                      todayTextColor: LuxuryColors.accent,
+                      dayTextColor: LuxuryColors.text,
+                      textDisabledColor: LuxuryColors.textLight,
+                      dotColor: LuxuryColors.accent,
+                      selectedDotColor: LuxuryColors.surface,
+                      arrowColor: LuxuryColors.accent,
+                      monthTextColor: LuxuryColors.accent,
+                      indicatorColor: LuxuryColors.accent,
+                      textDayFontFamily: 'Inter-Medium',
+                      textMonthFontFamily: 'Inter-Bold',
+                      textDayHeaderFontFamily: 'Inter-SemiBold',
+                      textDayFontSize: 16,
+                      textMonthFontSize: 18,
+                      textDayHeaderFontSize: 14
+                    }}
+                    style={styles.calendar}
+                  />
+                  
+                  <Text style={styles.calendarInstruction}>
+                    Select start and end dates (max 30-day range, within 90 days from today)
+                  </Text>
+                </View>
+              )}
+
+              {/* Load Button */}
+              {customWindow.startDate && customWindow.endDate && (
+                <TouchableOpacity
+                  style={[styles.loadCustomButton, customWindow.isLoading && styles.loadingButton]}
+                  onPress={loadCustomTimeWindow}
+                  disabled={customWindow.isLoading}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name={customWindow.isLoading ? "hourglass" : "analytics"} 
+                    size={18} 
+                    color={customWindow.isLoading ? LuxuryColors.textLight : LuxuryColors.surface} 
+                  />
+                  <Text style={[styles.loadButtonText, customWindow.isLoading && styles.loadingButtonText]}>
+                    {customWindow.isLoading ? 'Loading...' : (() => {
+                      const start = new Date(customWindow.startDate);
+                      const end = new Date(customWindow.endDate);
+                      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+                      return `Analyze ${days} Days`;
+                    })()}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Custom Days Display - Moved outside customWindowContent for proper width */}
+          {customWindow.days.length > 0 && (
+            <>
+              <View style={styles.customDaysTitleContainer}>
+                <Text style={styles.customDaysTitle}>
+                  Found {customWindow.days.length} available nights from {formatDateDisplay(customWindow.startDate!)} to {formatDateDisplay(customWindow.endDate!)}
+                </Text>
+              </View>
+              
+              {customWindow.days.map((day: DayData, index: number) => (
+                <View key={`custom_${index}`} style={styles.dayContainer}>
+                  <TouchableOpacity 
+                    onPress={() => toggleCustomDay(index)}
+                    activeOpacity={0.7}
+                  >
+                    <LinearGradient 
+                      colors={LuxuryColors.dayCardGradient as any}
+                      style={[
+                        styles.dayItem, 
+                        expandedCustomDays.includes(index) && styles.dayItemExpanded
+                      ]}
+                    >
+                      <View style={styles.dayLeft}>
+                        <View style={styles.dateInfo}>
+                          <Text style={styles.dayName}>{day.day}</Text>
+                          <Text style={styles.dateNumber}>{day.date.split(' ')[1]}</Text>
+                        </View>
+                        <View style={styles.priceInfo}>
+                          <View style={styles.priceFlow}>
+                            <Text style={styles.currentPrice}>${day.currentPrice}</Text>
+                            <Ionicons 
+                              name={day.suggestedPrice > day.currentPrice ? "trending-up" : "trending-down"} 
+                              size={16} 
+                              color={LuxuryColors.accent} 
+                              style={styles.trendIcon}
+                            />
+                            <Text style={[styles.suggestedPriceHighlight, styles.goldGlow]}>
+                              ${day.suggestedPrice}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      <Ionicons 
+                        name={expandedCustomDays.includes(index) ? "chevron-up" : "chevron-down"} 
+                        size={20} 
+                        color={LuxuryColors.textSecondary} 
+                      />
+                    </LinearGradient>
+                  </TouchableOpacity>
+
+                  {expandedCustomDays.includes(index) && (
+                    <LinearGradient 
+                      colors={LuxuryColors.lightSurfaceGradient as any}
+                      style={styles.expandedContent}
+                    >
+                      {/* AI's Take */}
+                      <LinearGradient 
+                        colors={LuxuryColors.cardGradient as any}
+                        style={styles.aiTakeCard}
+                      >
+                        <View style={styles.aiTakeHeader}>
+                          <Ionicons name="sparkles" size={16} color={LuxuryColors.accent} />
+                          <Text style={styles.aiTakeTitle}>AI's Take</Text>
+                        </View>
+                        <Text style={styles.aiTakeText}>{day.aiInsight}</Text>
+                      </LinearGradient>
+
+                      {/* Quick Stats */}
+                      <View style={styles.quickStats}>
+                        <View style={styles.statItem}>
+                          <Text style={styles.statValue}>${day.currentPrice}</Text>
+                          <Text style={styles.statLabel}>Your Price</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                          <Text style={styles.statValue}>${day.marketPrice}</Text>
+                          <Text style={styles.statLabel}>Market Avg</Text>
+                        </View>
+                        <View style={styles.statItem}>
+                          <Text style={[styles.statValue, styles.suggestedStat]}>${day.suggestedPrice}</Text>
+                          <Text style={[styles.statLabel, styles.suggestedStatLabel]}>AI Suggests</Text>
+                        </View>
+                      </View>
+
+                      {/* Price Update Actions - Use same structure as Next 5 Days */}
+                      <View style={styles.actionSection}>
+                        {/* AI Recommended Price Button */}
+                        <TouchableOpacity 
+                          style={[
+                            styles.actionButton, 
+                            styles.aiButton
+                          ]}
+                          onPress={() => handleUpdateCustomDayPrice(index, true)}
+                          activeOpacity={0.8}
+                        >
+                          <LinearGradient 
+                            colors={LuxuryColors.moneyGoldGradient as any}
+                            style={styles.gradientButton}
+                          >
+                            <Ionicons 
+                              name="sparkles" 
+                              size={16} 
+                              color={LuxuryColors.secondary} 
+                            />
+                            <Text style={styles.aiButtonText}>
+                              Use AI Price (${day.suggestedPrice})
+                            </Text>
+                          </LinearGradient>
+                        </TouchableOpacity>
+
+                        {/* Custom Price Input and Button */}
+                        <View style={styles.customPriceSection}>
+                          <TextInput
+                            style={styles.customPriceInput}
+                            placeholder="Enter custom price"
+                            placeholderTextColor={LuxuryColors.textLight}
+                            value={customPrices[`custom_${index}`] || ''}
+                            onChangeText={(text) => 
+                              setCustomPrices(prev => ({ 
+                                ...prev, 
+                                [`custom_${index}`]: text 
+                              }))
+                            }
+                            keyboardType="numeric"
+                          />
+                          <TouchableOpacity 
+                            style={[
+                              styles.customButton,
+                              (!customPrices[`custom_${index}`] || isNaN(parseFloat(customPrices[`custom_${index}`]))) && { opacity: 0.5 }
+                            ]}
+                            onPress={() => handleUpdateCustomDayPrice(index, false)}
+                            disabled={!customPrices[`custom_${index}`] || isNaN(parseFloat(customPrices[`custom_${index}`]))}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.customButtonText}>
+                              Update
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </LinearGradient>
+                  )}
+                </View>
+              ))}
+            </>
+          )}
+        </View>
 
         {/* Single Action Button */}
         <View style={styles.actionSection}>
@@ -1246,19 +1913,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  customPriceInput: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: LuxuryColors.border,
-    backgroundColor: LuxuryColors.surface,
-    color: LuxuryColors.text,
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    height: 48,
-  },
   customPriceInputDisabled: {
     backgroundColor: LuxuryColors.surfaceDark,
     opacity: 0.6,
@@ -1309,6 +1963,222 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: LuxuryColors.accent,
+  },
+  customWindowSection: {
+    marginTop: 40,
+    marginBottom: 20,
+  },
+  customWindowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  toggleButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: LuxuryColors.goldGlowBg,
+  },
+  customWindowContent: {
+    paddingHorizontal: 20,
+  },
+  dateSelectionSummary: {
+    backgroundColor: LuxuryColors.surface + '20',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: LuxuryColors.accent + '30',
+  },
+  selectorLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.textSecondary,
+    marginBottom: 4,
+  },
+  selectedDatesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dateDisplay: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  dateDisplayLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.textSecondary,
+    marginBottom: 4,
+  },
+  dateDisplayValue: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: LuxuryColors.accent,
+  },
+  dateRangeSummary: {
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: LuxuryColors.accent + '20',
+  },
+  dateRangeSummaryText: {
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.textSecondary,
+  },
+  clearButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: LuxuryColors.textLight + '20',
+  },
+  clearButtonText: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.textSecondary,
+  },
+  calendarToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: LuxuryColors.goldGlowBg,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: LuxuryColors.accent + '30',
+  },
+  calendarToggleText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: LuxuryColors.accent,
+    marginHorizontal: 8,
+  },
+  calendarContainer: {
+    backgroundColor: LuxuryColors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: LuxuryColors.accent + '30',
+    shadowColor: LuxuryColors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  calendar: {
+    borderRadius: 12,
+  },
+  calendarInstruction: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.textSecondary,
+    textAlign: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: LuxuryColors.accent + '20',
+  },
+  loadCustomButton: {
+    backgroundColor: LuxuryColors.accent,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    shadowColor: LuxuryColors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  loadingButton: {
+    backgroundColor: LuxuryColors.textLight,
+  },
+  loadButtonText: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: LuxuryColors.surface,
+    marginLeft: 8,
+  },
+  loadingButtonText: {
+    color: LuxuryColors.textSecondary,
+  },
+  customDaysTitleContainer: {
+    backgroundColor: LuxuryColors.surface + '20',
+    borderRadius: 8,
+    padding: 12,
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: LuxuryColors.accent + '20',
+  },
+  customDaysTitle: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: LuxuryColors.textSecondary,
+    textAlign: 'center',
+  },
+  actionButtons: {
+    gap: 12,
+    marginTop: 16,
+  },
+  actionButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  aiButton: {
+    marginBottom: 8,
+  },
+  gradientButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  aiButtonText: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: LuxuryColors.surface,
+    marginLeft: 6,
+  },
+  customPriceSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  customPriceInput: {
+    flex: 1,
+    backgroundColor: LuxuryColors.surface + '20',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.text,
+    borderWidth: 1,
+    borderColor: LuxuryColors.accent + '30',
+  },
+  customButton: {
+    backgroundColor: LuxuryColors.accent + '20',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: LuxuryColors.accent,
+  },
+  customButtonText: {
+    fontSize: 12,
     fontFamily: 'Inter-SemiBold',
     color: LuxuryColors.accent,
   },

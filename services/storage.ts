@@ -12,9 +12,9 @@ export interface ApiConfig {
 }
 
 export interface PropertyContext {
-  guestProfile: string;  // Answer to "Who are your typical guests..."
-  competitiveAdvantage: string;  // Answer to "What's your main competition..."
-  bookingPatterns: string;  // Answer to "When do you get booked up..."
+  mainGuest: string;  // Answer to "Who is your main guest?" (Leisure/Business/Groups) - single select
+  specialFeature: string[];  // Answer to "What makes your property special?" - multiple select
+  pricingGoal: string[];  // Answer to "What's your top pricing goal?" - multiple select
   createdAt: string;  // Timestamp
 }
 
@@ -227,7 +227,7 @@ export class SecureStorageService {
   static async isPropertyContextConfigured(): Promise<boolean> {
     try {
       const context = await this.getPropertyContext();
-      return !!(context?.guestProfile?.trim() && context?.competitiveAdvantage?.trim() && context?.bookingPatterns?.trim());
+      return !!(context?.mainGuest?.trim() && context?.specialFeature?.length > 0 && context?.pricingGoal?.length > 0);
     } catch (error) {
       return false;
     }
