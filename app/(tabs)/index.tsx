@@ -1,42 +1,13 @@
 import { LuxuryColors } from '@/constants/Colors';
 import { AIResult, ApiService, NightData, SinglePriceUpdateRequest } from '@/services/api';
+import { mainScreenStyles } from '@/styles/MainScreenStyles';
+import { AppData, CustomTimeWindowData, DayData } from '@/types/MainScreenTypes';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-
-interface DayData {
-  date: string;
-  originalDate: string;
-  day: string;
-  currentPrice: number;
-  marketPrice: number;
-  suggestedPrice: number;
-  aiInsight: string;
-  boost: string;
-}
-
-interface AppData {
-  propertyName: string;
-  location: string;
-  currentPrice: number;
-  marketPrice: number;
-  suggestedPrice: number;
-  priceChange: string;
-  totalIncrease: string;
-  nextFiveDays: DayData[];
-}
-
-// Update interface for custom time window with simpler date handling
-interface CustomTimeWindowData {
-  days: DayData[];
-  startDate: string | null; // Store as YYYY-MM-DD string
-  endDate: string | null;   // Store as YYYY-MM-DD string
-  isLoading: boolean;
-  showCalendar: boolean;
-}
 
 export default function MainScreen() {
   const [expandedDays, setExpandedDays] = useState<number[]>([]);
@@ -242,7 +213,7 @@ export default function MainScreen() {
       : "+$0";
 
     return {
-      propertyName: "Newport Luxury Property",
+      propertyName: "Test Luxury Property",
       location: "Newport, RI",
       currentPrice: avgCurrentPrice,
       marketPrice: avgMarketPrice,
@@ -382,63 +353,70 @@ export default function MainScreen() {
   // Show loading state (splash screen)
   if (loading && showSplash) {
     return (
-      <View style={styles.container}>
-        {/* Same background as main screen */}
+      <SafeAreaView style={mainScreenStyles.container}>
         <LinearGradient 
           colors={LuxuryColors.luxuryBackgroundGradient as any}
-          style={styles.backgroundGradient}
+          style={mainScreenStyles.backgroundGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         />
-        <SafeAreaView style={styles.safeArea}>
-          <View style={styles.loadingContainer}>
+        <View style={mainScreenStyles.eliteAccent} />
+        <View style={mainScreenStyles.luxuryCorner} />
+        <View style={mainScreenStyles.safeArea}>
+          <View style={mainScreenStyles.loadingContainer}>
             <Animated.View style={{ opacity: shimmerAnimation }}>
-              <Text style={[styles.appName, { color: LuxuryColors.accent }]}>mAIrble</Text>
+              <Text style={[mainScreenStyles.appName, { color: LuxuryColors.accent }]}>mAIrble</Text>
             </Animated.View>
-            <View style={styles.loadingTextContainer}>
+            <View style={mainScreenStyles.loadingTextContainer}>
               <Ionicons name="hourglass-outline" size={24} color={LuxuryColors.textSecondary} />
-              <Text style={styles.loadingText}>Fetching your pricing data...</Text>
+              <Text style={mainScreenStyles.loadingText}>Fetching your pricing data...</Text>
             </View>
           </View>
-        </SafeAreaView>
-      </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
   // Show error state
   if (error && !appData && !loading) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={mainScreenStyles.container}>
         <LinearGradient 
           colors={LuxuryColors.luxuryBackgroundGradient as any}
-          style={styles.backgroundGradient}
+          style={mainScreenStyles.backgroundGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         />
-        <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.errorContainer]}>
+        <View style={mainScreenStyles.eliteAccent} />
+        <View style={mainScreenStyles.luxuryCorner} />
+        <View style={mainScreenStyles.safeArea}>
+          <View style={[mainScreenStyles.errorContainer]}>
             <Ionicons name="warning-outline" size={48} color={LuxuryColors.error} />
-            <Text style={[styles.appName, { color: LuxuryColors.error, marginTop: 16 }]}>Connection Error</Text>
-            <Text style={[styles.propertyLocation, { textAlign: 'center', marginHorizontal: 20 }]}>
+            <Text style={[mainScreenStyles.appName, { color: LuxuryColors.error, marginTop: 16 }]}>Connection Error</Text>
+            <Text style={[mainScreenStyles.propertyLocation, { textAlign: 'center', marginHorizontal: 20 }]}>
               Unable to load pricing data. This might be due to an invalid API key or network issue.
             </Text>
             
-            <View style={styles.errorButtonContainer}>
+            <View style={mainScreenStyles.errorButtonContainer}>
               <TouchableOpacity 
-                style={[styles.secondaryButton, { marginBottom: 12 }]} 
+                style={[mainScreenStyles.secondaryButton, { marginBottom: 12 }]} 
                 onPress={() => router.push('/settings')}
               >
                 <Ionicons name="settings-outline" size={20} color={LuxuryColors.accent} style={{ marginRight: 8 }} />
-                <Text style={styles.secondaryButtonText}>Go to Settings</Text>
+                <Text style={mainScreenStyles.secondaryButtonText}>Go to Settings</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.secondaryButton]} 
+                style={[mainScreenStyles.secondaryButton]} 
                 onPress={loadData}
               >
                 <Ionicons name="refresh-outline" size={20} color={LuxuryColors.accent} style={{ marginRight: 8 }} />
-                <Text style={styles.secondaryButtonText}>Try Again</Text>
+                <Text style={mainScreenStyles.secondaryButtonText}>Try Again</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </SafeAreaView>
-      </View>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -453,9 +431,9 @@ export default function MainScreen() {
     if (!loading) return null;
     
     return (
-      <View style={styles.loadingDotsContainer}>
+      <View style={mainScreenStyles.loadingDotsContainer}>
         <Animated.View style={{ transform: [{ translateY: pulseAnimation }] }}>
-          <Text style={styles.loadingDotsText}>● ● ●</Text>
+          <Text style={mainScreenStyles.loadingDotsText}>● ● ●</Text>
         </Animated.View>
       </View>
     );
@@ -463,21 +441,21 @@ export default function MainScreen() {
 
   // Loading skeleton component
   const LoadingSkeleton = () => (
-    <View style={styles.dayContainer}>
-      <Animated.View style={[styles.dayItem, { opacity: shimmerOpacity }]}>
-        <View style={styles.dayLeft}>
-          <View style={styles.dateInfo}>
-            <View style={[styles.skeletonText, styles.skeletonSmall]} />
-            <View style={[styles.skeletonText, styles.skeletonMedium]} />
+    <View style={mainScreenStyles.dayContainer}>
+      <Animated.View style={[mainScreenStyles.dayItem, { opacity: shimmerOpacity }]}>
+        <View style={mainScreenStyles.dayLeft}>
+          <View style={mainScreenStyles.dateInfo}>
+            <View style={[mainScreenStyles.skeletonText, mainScreenStyles.skeletonSmall]} />
+            <View style={[mainScreenStyles.skeletonText, mainScreenStyles.skeletonMedium]} />
           </View>
-          <View style={styles.priceInfo}>
-            <View style={styles.priceFlow}>
-              <View style={[styles.skeletonText, styles.skeletonLarge]} />
-              <View style={[styles.skeletonText, styles.skeletonMedium, { marginLeft: 10 }]} />
+          <View style={mainScreenStyles.priceInfo}>
+            <View style={mainScreenStyles.priceFlow}>
+              <View style={[mainScreenStyles.skeletonText, mainScreenStyles.skeletonLarge]} />
+              <View style={[mainScreenStyles.skeletonText, mainScreenStyles.skeletonMedium, { marginLeft: 10 }]} />
             </View>
           </View>
         </View>
-        <View style={[styles.skeletonText, styles.skeletonSmall]} />
+        <View style={[mainScreenStyles.skeletonText, mainScreenStyles.skeletonSmall]} />
       </Animated.View>
     </View>
   );
@@ -856,11 +834,11 @@ export default function MainScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={mainScreenStyles.container}>
       {/* High Contrast Background */}
       <LinearGradient 
         colors={LuxuryColors.luxuryBackgroundGradient as any}
-        style={styles.backgroundGradient}
+        style={mainScreenStyles.backgroundGradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
@@ -868,7 +846,7 @@ export default function MainScreen() {
       {/* Elite Split Background */}
       <LinearGradient 
         colors={LuxuryColors.darkBackgroundGradient as any}
-        style={styles.splitDarkSection}
+        style={mainScreenStyles.splitDarkSection}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
@@ -876,33 +854,33 @@ export default function MainScreen() {
       {/* Rich Gold Transition */}
       <LinearGradient 
         colors={LuxuryColors.darkGoldGradient as any}
-        style={styles.goldTransition}
+        style={mainScreenStyles.goldTransition}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
       
 
       {/* Elite Accent */}
-      <View style={styles.eliteAccent} />
+      <View style={mainScreenStyles.eliteAccent} />
       
       {/* Luxury Corner Detail */}
       <LinearGradient 
         colors={['rgba(184, 134, 11, 0.4)', 'transparent']}
-        style={styles.luxuryCorner}
+        style={mainScreenStyles.luxuryCorner}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
       
-      <SafeAreaView style={styles.safeArea}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <SafeAreaView style={mainScreenStyles.safeArea}>
+        <ScrollView style={mainScreenStyles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Clean Header */}
-        <View style={styles.header}>
+        <View style={mainScreenStyles.header}>
           <View>
-            <Text style={styles.appName}>mAIrble</Text>
-            <Text style={styles.propertyLocation}>{data.propertyName} • {data.location}</Text>
+            <Text style={mainScreenStyles.appName}>mAIrble</Text>
+            <Text style={mainScreenStyles.propertyLocation}>{data.propertyName} • {data.location}</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/settings')}>
-            <Text style={styles.profileInitial}>B</Text>
+          <TouchableOpacity style={mainScreenStyles.profileButton} onPress={() => router.push('/settings')}>
+            <Text style={mainScreenStyles.profileInitial}>B</Text>
           </TouchableOpacity>
         </View>
 
@@ -910,33 +888,33 @@ export default function MainScreen() {
         <Animated.View style={{ opacity: loading ? 0.7 : fadeAnimation }}>
           <LinearGradient 
             colors={LuxuryColors.darkEliteGradient as any}
-            style={styles.pricingCard}
+            style={mainScreenStyles.pricingCard}
           >
-          <View style={styles.pricingHeader}>
-            <Text style={styles.pricingTitle}>Current Rate</Text>
+          <View style={mainScreenStyles.pricingHeader}>
+            <Text style={mainScreenStyles.pricingTitle}>Current Rate</Text>
           </View>
-          <View style={styles.pricingGrid}>
-            <View style={styles.priceItem}>
-              <Text style={styles.priceValue}>${data.currentPrice}</Text>
-              <Text style={styles.priceLabel}>Your Price</Text>
+          <View style={mainScreenStyles.pricingGrid}>
+            <View style={mainScreenStyles.priceItem}>
+              <Text style={mainScreenStyles.priceValue}>${data.currentPrice}</Text>
+              <Text style={mainScreenStyles.priceLabel}>Your Price</Text>
             </View>
-            <View style={styles.priceItem}>
-              <Text style={styles.priceValue}>${data.marketPrice}</Text>
-              <Text style={styles.priceLabel}>Market Avg</Text>
+            <View style={mainScreenStyles.priceItem}>
+              <Text style={mainScreenStyles.priceValue}>${data.marketPrice}</Text>
+              <Text style={mainScreenStyles.priceLabel}>Market Avg</Text>
             </View>
-            <View style={styles.priceItem}>
-              <Text style={[styles.priceValue, styles.suggestedPrice]}>${data.suggestedPrice}</Text>
-              <Text style={[styles.priceLabel, styles.suggestedLabel]}>AI Suggests</Text>
+            <View style={mainScreenStyles.priceItem}>
+              <Text style={[mainScreenStyles.priceValue, mainScreenStyles.suggestedPrice]}>${data.suggestedPrice}</Text>
+              <Text style={[mainScreenStyles.priceLabel, mainScreenStyles.suggestedLabel]}>AI Suggests</Text>
             </View>
           </View>
         </LinearGradient>
         </Animated.View>
 
         {/* Upcoming Days - Minimal Design */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Next 5 Days</Text>
+        <View style={mainScreenStyles.sectionHeader}>
+          <Text style={mainScreenStyles.sectionTitle}>Next 5 Days</Text>
           <TouchableOpacity 
-            style={[styles.refreshButton, loading && styles.refreshButtonLoading]} 
+            style={[mainScreenStyles.refreshButton, loading && mainScreenStyles.refreshButtonLoading]} 
             onPress={loadData}
             disabled={loading}
             activeOpacity={0.7}
@@ -946,7 +924,7 @@ export default function MainScreen() {
               size={18} 
               color={loading ? LuxuryColors.textLight : LuxuryColors.accent} 
             />
-            <Text style={[styles.refreshButtonText, loading && styles.refreshButtonTextLoading]}>
+            <Text style={[mainScreenStyles.refreshButtonText, loading && mainScreenStyles.refreshButtonTextLoading]}>
               {loading ? 'Updating...' : 'Refresh'}
             </Text>
           </TouchableOpacity>
@@ -955,7 +933,7 @@ export default function MainScreen() {
         {loading && (
           <View>
             <LoadingDots />
-            <Text style={styles.loadingIndicatorText}>
+            <Text style={mainScreenStyles.loadingIndicatorText}>
               {appData ? 'Updating pricing insights...' : 'Loading pricing insights...'}
             </Text>
           </View>
@@ -970,7 +948,7 @@ export default function MainScreen() {
           // Show actual data with fade-in animation
           <Animated.View style={{ opacity: fadeAnimation }}>
             {data.nextFiveDays.map((day: DayData, index: number) => (
-          <View key={index} style={styles.dayContainer}>
+          <View key={index} style={mainScreenStyles.dayContainer}>
             <TouchableOpacity 
               onPress={() => toggleDay(index)}
               activeOpacity={0.7}
@@ -978,27 +956,27 @@ export default function MainScreen() {
               <LinearGradient 
                 colors={LuxuryColors.dayCardGradient as any}
                 style={[
-                  styles.dayItem, 
-                  expandedDays.includes(index) && styles.dayItemExpanded
+                  mainScreenStyles.dayItem, 
+                  expandedDays.includes(index) && mainScreenStyles.dayItemExpanded
                 ]}
               >
-              <View style={styles.dayLeft}>
-                <View style={styles.dateInfo}>
-                  <Text style={styles.dayName}>{day.day}</Text>
-                  <Text style={styles.dateNumber}>{day.date.split(' ')[1]}</Text>
+              <View style={mainScreenStyles.dayLeft}>
+                <View style={mainScreenStyles.dateInfo}>
+                  <Text style={mainScreenStyles.dayName}>{day.day}</Text>
+                  <Text style={mainScreenStyles.dateNumber}>{day.date.split(' ')[1]}</Text>
                 </View>
-                <View style={styles.priceInfo}>
-                  <View style={styles.priceFlow}>
-                    <Text style={styles.currentPrice}>${day.currentPrice}</Text>
+                <View style={mainScreenStyles.priceInfo}>
+                  <View style={mainScreenStyles.priceFlow}>
+                    <Text style={mainScreenStyles.currentPrice}>${day.currentPrice}</Text>
                     <Ionicons 
                       name={day.suggestedPrice > day.currentPrice ? "trending-up" : "trending-down"} 
                       size={16} 
                       color={LuxuryColors.accent} 
-                      style={styles.trendIcon}
+                      style={mainScreenStyles.trendIcon}
                     />
                     <Text style={[
-                      styles.suggestedPriceHighlight,
-                      styles.goldGlow
+                      mainScreenStyles.suggestedPriceHighlight,
+                      mainScreenStyles.goldGlow
                     ]}>
                       ${day.suggestedPrice}
                     </Text>
@@ -1016,46 +994,46 @@ export default function MainScreen() {
             {expandedDays.includes(index) && (
               <LinearGradient 
                 colors={LuxuryColors.lightSurfaceGradient as any}
-                style={styles.expandedContent}
+                style={mainScreenStyles.expandedContent}
               >
                 {/* AI's Take - Clean Card */}
                 <LinearGradient 
                   colors={LuxuryColors.cardGradient as any}
-                  style={styles.aiTakeCard}
+                  style={mainScreenStyles.aiTakeCard}
                 >
-                  <View style={styles.aiTakeHeader}>
+                  <View style={mainScreenStyles.aiTakeHeader}>
                     <Ionicons name="sparkles" size={16} color={LuxuryColors.accent} />
-                    <Text style={styles.aiTakeTitle}>AI's Take</Text>
+                    <Text style={mainScreenStyles.aiTakeTitle}>AI's Take</Text>
                   </View>
-                  <Text style={styles.aiTakeText}>{day.aiInsight}</Text>
+                  <Text style={mainScreenStyles.aiTakeText}>{day.aiInsight}</Text>
                 </LinearGradient>
 
                 {/* Quick Stats */}
-                <View style={styles.quickStats}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>${day.currentPrice}</Text>
-                    <Text style={styles.statLabel}>Your Price</Text>
+                <View style={mainScreenStyles.quickStats}>
+                  <View style={mainScreenStyles.statItem}>
+                    <Text style={mainScreenStyles.statValue}>${day.currentPrice}</Text>
+                    <Text style={mainScreenStyles.statLabel}>Your Price</Text>
                   </View>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>${day.marketPrice}</Text>
-                    <Text style={styles.statLabel}>Market Avg</Text>
+                  <View style={mainScreenStyles.statItem}>
+                    <Text style={mainScreenStyles.statValue}>${day.marketPrice}</Text>
+                    <Text style={mainScreenStyles.statLabel}>Market Avg</Text>
                   </View>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statValue, styles.suggestedStat]}>${day.suggestedPrice}</Text>
-                    <Text style={[styles.statLabel, styles.suggestedStatLabel]}>AI Suggests</Text>
+                  <View style={mainScreenStyles.statItem}>
+                    <Text style={[mainScreenStyles.statValue, mainScreenStyles.suggestedStat]}>${day.suggestedPrice}</Text>
+                    <Text style={[mainScreenStyles.statLabel, mainScreenStyles.suggestedStatLabel]}>AI Suggests</Text>
                   </View>
                 </View>
 
                 {/* Price Update Actions */}
-                <View style={styles.updateSection}>
-                  <Text style={styles.updateSectionTitle}>Update Price</Text>
+                <View style={mainScreenStyles.updateSection}>
+                  <Text style={mainScreenStyles.updateSectionTitle}>Update Price</Text>
                   
                   {/* AI Recommended Price Button */}
                   <TouchableOpacity 
                     style={[
-                      styles.updateButton, 
-                      styles.aiUpdateButton,
-                      updatingDays.has(index) && styles.updateButtonDisabled
+                      mainScreenStyles.updateButton, 
+                      mainScreenStyles.aiUpdateButton,
+                      updatingDays.has(index) && mainScreenStyles.updateButtonDisabled
                     ]}
                     onPress={() => handleUpdatePrice(index, true)}
                     disabled={updatingDays.has(index)}
@@ -1063,26 +1041,26 @@ export default function MainScreen() {
                   >
                     <LinearGradient 
                       colors={LuxuryColors.moneyGoldGradient as any}
-                      style={styles.updateButtonGradient}
+                      style={mainScreenStyles.updateButtonGradient}
                     >
                       <Ionicons 
                         name="sparkles" 
                         size={16} 
                         color={LuxuryColors.secondary} 
-                        style={styles.updateButtonIcon}
+                        style={mainScreenStyles.updateButtonIcon}
                       />
-                      <Text style={[styles.updateButtonText, styles.aiUpdateButtonText]}>
+                      <Text style={[mainScreenStyles.updateButtonText, mainScreenStyles.aiUpdateButtonText]}>
                         {updatingDays.has(index) ? 'Updating...' : `Use AI Price ($${day.suggestedPrice})`}
                       </Text>
                     </LinearGradient>
                   </TouchableOpacity>
 
                   {/* Custom Price Input and Button */}
-                  <View style={styles.customPriceContainer}>
+                  <View style={mainScreenStyles.customPriceContainer}>
                     <TextInput
                       style={[
-                        styles.customPriceInput,
-                        updatingDays.has(index) && styles.customPriceInputDisabled
+                        mainScreenStyles.customPriceInput,
+                        updatingDays.has(index) && mainScreenStyles.customPriceInputDisabled
                       ]}
                       placeholder="Enter custom price"
                       placeholderTextColor={LuxuryColors.textLight}
@@ -1093,10 +1071,10 @@ export default function MainScreen() {
                     />
                     <TouchableOpacity 
                       style={[
-                        styles.updateButton,
-                        styles.customUpdateButton,
-                        updatingDays.has(index) && styles.updateButtonDisabled,
-                        (!customPrices[index] || isNaN(parseFloat(customPrices[index]))) && styles.updateButtonDisabled
+                        mainScreenStyles.updateButton,
+                        mainScreenStyles.customUpdateButton,
+                        updatingDays.has(index) && mainScreenStyles.updateButtonDisabled,
+                        (!customPrices[index] || isNaN(parseFloat(customPrices[index]))) && mainScreenStyles.updateButtonDisabled
                       ]}
                       onPress={() => handleUpdatePrice(index, false)}
                       disabled={updatingDays.has(index) || !customPrices[index] || isNaN(parseFloat(customPrices[index]))}
@@ -1104,15 +1082,15 @@ export default function MainScreen() {
                     >
                       <LinearGradient 
                         colors={LuxuryColors.darkEliteGradient as any}
-                        style={styles.updateButtonGradient}
+                        style={mainScreenStyles.updateButtonGradient}
                       >
                         <Ionicons 
                           name="create" 
                           size={16} 
                           color={LuxuryColors.accent} 
-                          style={styles.updateButtonIcon}
+                          style={mainScreenStyles.updateButtonIcon}
                         />
-                        <Text style={[styles.updateButtonText, styles.customUpdateButtonText]}>
+                        <Text style={[mainScreenStyles.updateButtonText, mainScreenStyles.customUpdateButtonText]}>
                           {updatingDays.has(index) ? 'Updating...' : 'Use Custom Price'}
                         </Text>
                       </LinearGradient>
@@ -1127,11 +1105,11 @@ export default function MainScreen() {
         )}
 
         {/* Updated Custom Date Range Section with Calendar */}
-        <View style={styles.customWindowSection}>
-          <View style={styles.customWindowHeader}>
-            <Text style={styles.sectionTitle}>Custom Date Range</Text>
+        <View style={mainScreenStyles.customWindowSection}>
+          <View style={mainScreenStyles.customWindowHeader}>
+            <Text style={mainScreenStyles.sectionTitle}>Custom Date Range</Text>
             <TouchableOpacity
-              style={styles.toggleButton}
+              style={mainScreenStyles.toggleButton}
               onPress={() => setShowCustomWindow(!showCustomWindow)}
               activeOpacity={0.7}
             >
@@ -1144,37 +1122,37 @@ export default function MainScreen() {
           </View>
 
           {showCustomWindow && (
-            <View style={styles.customWindowContent}>
+            <View style={mainScreenStyles.customWindowContent}>
               {/* Date Selection Summary */}
-              <View style={styles.dateSelectionSummary}>
-                <Text style={styles.selectorLabel}>Select Date Range (max 30 days, within 90 days from today):</Text>
-                <View style={styles.selectedDatesRow}>
-                  <View style={styles.dateDisplay}>
-                    <Text style={styles.dateDisplayLabel}>From:</Text>
-                    <Text style={styles.dateDisplayValue}>
+              <View style={mainScreenStyles.dateSelectionSummary}>
+                <Text style={mainScreenStyles.selectorLabel}>Select Date Range (max 30 days, within 90 days from today):</Text>
+                <View style={mainScreenStyles.selectedDatesRow}>
+                  <View style={mainScreenStyles.dateDisplay}>
+                    <Text style={mainScreenStyles.dateDisplayLabel}>From:</Text>
+                    <Text style={mainScreenStyles.dateDisplayValue}>
                       {customWindow.startDate ? formatDateDisplay(customWindow.startDate) : 'Select date'}
                     </Text>
                   </View>
                   
-                  <View style={styles.dateDisplay}>
-                    <Text style={styles.dateDisplayLabel}>To:</Text>
-                    <Text style={styles.dateDisplayValue}>
+                  <View style={mainScreenStyles.dateDisplay}>
+                    <Text style={mainScreenStyles.dateDisplayLabel}>To:</Text>
+                    <Text style={mainScreenStyles.dateDisplayValue}>
                       {customWindow.endDate ? formatDateDisplay(customWindow.endDate) : 'Select date'}
                     </Text>
                   </View>
                 </View>
 
                 {customWindow.startDate && customWindow.endDate && (
-                  <View style={styles.dateRangeSummary}>
-                    <Text style={styles.dateRangeSummaryText}>
+                  <View style={mainScreenStyles.dateRangeSummary}>
+                    <Text style={mainScreenStyles.dateRangeSummaryText}>
                       {(() => {
                         const start = new Date(customWindow.startDate);
                         const end = new Date(customWindow.endDate);
                         return Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
                       })()} days selected
                     </Text>
-                    <TouchableOpacity onPress={clearDateSelection} style={styles.clearButton}>
-                      <Text style={styles.clearButtonText}>Clear</Text>
+                    <TouchableOpacity onPress={clearDateSelection} style={mainScreenStyles.clearButton}>
+                      <Text style={mainScreenStyles.clearButtonText}>Clear</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1182,7 +1160,7 @@ export default function MainScreen() {
 
               {/* Calendar Toggle */}
               <TouchableOpacity
-                style={styles.calendarToggleButton}
+                style={mainScreenStyles.calendarToggleButton}
                 onPress={() => setCustomWindow(prev => ({ ...prev, showCalendar: !prev.showCalendar }))}
                 activeOpacity={0.7}
               >
@@ -1191,7 +1169,7 @@ export default function MainScreen() {
                   size={18} 
                   color={LuxuryColors.accent} 
                 />
-                <Text style={styles.calendarToggleText}>
+                <Text style={mainScreenStyles.calendarToggleText}>
                   {customWindow.showCalendar ? 'Hide Calendar' : 'Select Dates'}
                 </Text>
                 <Ionicons 
@@ -1203,7 +1181,7 @@ export default function MainScreen() {
 
               {/* Calendar */}
               {customWindow.showCalendar && (
-                <View style={styles.calendarContainer}>
+                <View style={mainScreenStyles.calendarContainer}>
                   <Calendar
                     onDayPress={handleCalendarDayPress}
                     markedDates={getMarkedDates()}
@@ -1230,10 +1208,10 @@ export default function MainScreen() {
                       textMonthFontSize: 18,
                       textDayHeaderFontSize: 14
                     }}
-                    style={styles.calendar}
+                    style={mainScreenStyles.calendar}
                   />
                   
-                  <Text style={styles.calendarInstruction}>
+                  <Text style={mainScreenStyles.calendarInstruction}>
                     Select start and end dates (max 30-day range, within 90 days from today)
                   </Text>
                 </View>
@@ -1242,7 +1220,7 @@ export default function MainScreen() {
               {/* Load Button */}
               {customWindow.startDate && customWindow.endDate && (
                 <TouchableOpacity
-                  style={[styles.loadCustomButton, customWindow.isLoading && styles.loadingButton]}
+                  style={[mainScreenStyles.loadCustomButton, customWindow.isLoading && mainScreenStyles.loadingButton]}
                   onPress={loadCustomTimeWindow}
                   disabled={customWindow.isLoading}
                   activeOpacity={0.7}
@@ -1252,7 +1230,7 @@ export default function MainScreen() {
                     size={18} 
                     color={customWindow.isLoading ? LuxuryColors.textLight : LuxuryColors.surface} 
                   />
-                  <Text style={[styles.loadButtonText, customWindow.isLoading && styles.loadingButtonText]}>
+                  <Text style={[mainScreenStyles.loadButtonText, customWindow.isLoading && mainScreenStyles.loadingButtonText]}>
                     {customWindow.isLoading ? 'Loading...' : (() => {
                       const start = new Date(customWindow.startDate);
                       const end = new Date(customWindow.endDate);
@@ -1268,14 +1246,14 @@ export default function MainScreen() {
           {/* Custom Days Display - Moved outside customWindowContent for proper width */}
           {customWindow.days.length > 0 && (
             <>
-              <View style={styles.customDaysTitleContainer}>
-                <Text style={styles.customDaysTitle}>
+              <View style={mainScreenStyles.customDaysTitleContainer}>
+                <Text style={mainScreenStyles.customDaysTitle}>
                   Found {customWindow.days.length} available nights from {formatDateDisplay(customWindow.startDate!)} to {formatDateDisplay(customWindow.endDate!)}
                 </Text>
               </View>
               
               {customWindow.days.map((day: DayData, index: number) => (
-                <View key={`custom_${index}`} style={styles.dayContainer}>
+                <View key={`custom_${index}`} style={mainScreenStyles.dayContainer}>
                   <TouchableOpacity 
                     onPress={() => toggleCustomDay(index)}
                     activeOpacity={0.7}
@@ -1283,25 +1261,25 @@ export default function MainScreen() {
                     <LinearGradient 
                       colors={LuxuryColors.dayCardGradient as any}
                       style={[
-                        styles.dayItem, 
-                        expandedCustomDays.includes(index) && styles.dayItemExpanded
+                        mainScreenStyles.dayItem, 
+                        expandedCustomDays.includes(index) && mainScreenStyles.dayItemExpanded
                       ]}
                     >
-                      <View style={styles.dayLeft}>
-                        <View style={styles.dateInfo}>
-                          <Text style={styles.dayName}>{day.day}</Text>
-                          <Text style={styles.dateNumber}>{day.date.split(' ')[1]}</Text>
+                      <View style={mainScreenStyles.dayLeft}>
+                        <View style={mainScreenStyles.dateInfo}>
+                          <Text style={mainScreenStyles.dayName}>{day.day}</Text>
+                          <Text style={mainScreenStyles.dateNumber}>{day.date.split(' ')[1]}</Text>
                         </View>
-                        <View style={styles.priceInfo}>
-                          <View style={styles.priceFlow}>
-                            <Text style={styles.currentPrice}>${day.currentPrice}</Text>
+                        <View style={mainScreenStyles.priceInfo}>
+                          <View style={mainScreenStyles.priceFlow}>
+                            <Text style={mainScreenStyles.currentPrice}>${day.currentPrice}</Text>
                             <Ionicons 
                               name={day.suggestedPrice > day.currentPrice ? "trending-up" : "trending-down"} 
                               size={16} 
                               color={LuxuryColors.accent} 
-                              style={styles.trendIcon}
+                              style={mainScreenStyles.trendIcon}
                             />
-                            <Text style={[styles.suggestedPriceHighlight, styles.goldGlow]}>
+                            <Text style={[mainScreenStyles.suggestedPriceHighlight, mainScreenStyles.goldGlow]}>
                               ${day.suggestedPrice}
                             </Text>
                           </View>
@@ -1318,66 +1296,66 @@ export default function MainScreen() {
                   {expandedCustomDays.includes(index) && (
                     <LinearGradient 
                       colors={LuxuryColors.lightSurfaceGradient as any}
-                      style={styles.expandedContent}
+                      style={mainScreenStyles.expandedContent}
                     >
                       {/* AI's Take */}
                       <LinearGradient 
                         colors={LuxuryColors.cardGradient as any}
-                        style={styles.aiTakeCard}
+                        style={mainScreenStyles.aiTakeCard}
                       >
-                        <View style={styles.aiTakeHeader}>
+                        <View style={mainScreenStyles.aiTakeHeader}>
                           <Ionicons name="sparkles" size={16} color={LuxuryColors.accent} />
-                          <Text style={styles.aiTakeTitle}>AI's Take</Text>
+                          <Text style={mainScreenStyles.aiTakeTitle}>AI's Take</Text>
                         </View>
-                        <Text style={styles.aiTakeText}>{day.aiInsight}</Text>
+                        <Text style={mainScreenStyles.aiTakeText}>{day.aiInsight}</Text>
                       </LinearGradient>
 
                       {/* Quick Stats */}
-                      <View style={styles.quickStats}>
-                        <View style={styles.statItem}>
-                          <Text style={styles.statValue}>${day.currentPrice}</Text>
-                          <Text style={styles.statLabel}>Your Price</Text>
+                      <View style={mainScreenStyles.quickStats}>
+                        <View style={mainScreenStyles.statItem}>
+                          <Text style={mainScreenStyles.statValue}>${day.currentPrice}</Text>
+                          <Text style={mainScreenStyles.statLabel}>Your Price</Text>
                         </View>
-                        <View style={styles.statItem}>
-                          <Text style={styles.statValue}>${day.marketPrice}</Text>
-                          <Text style={styles.statLabel}>Market Avg</Text>
+                        <View style={mainScreenStyles.statItem}>
+                          <Text style={mainScreenStyles.statValue}>${day.marketPrice}</Text>
+                          <Text style={mainScreenStyles.statLabel}>Market Avg</Text>
                         </View>
-                        <View style={styles.statItem}>
-                          <Text style={[styles.statValue, styles.suggestedStat]}>${day.suggestedPrice}</Text>
-                          <Text style={[styles.statLabel, styles.suggestedStatLabel]}>AI Suggests</Text>
+                        <View style={mainScreenStyles.statItem}>
+                          <Text style={[mainScreenStyles.statValue, mainScreenStyles.suggestedStat]}>${day.suggestedPrice}</Text>
+                          <Text style={[mainScreenStyles.statLabel, mainScreenStyles.suggestedStatLabel]}>AI Suggests</Text>
                         </View>
                       </View>
 
                       {/* Price Update Actions - Use same structure as Next 5 Days */}
-                      <View style={styles.actionSection}>
+                      <View style={mainScreenStyles.actionSection}>
                         {/* AI Recommended Price Button */}
                         <TouchableOpacity 
                           style={[
-                            styles.actionButton, 
-                            styles.aiButton
+                            mainScreenStyles.actionButton, 
+                            mainScreenStyles.aiButton
                           ]}
                           onPress={() => handleUpdateCustomDayPrice(index, true)}
                           activeOpacity={0.8}
                         >
                           <LinearGradient 
                             colors={LuxuryColors.moneyGoldGradient as any}
-                            style={styles.gradientButton}
+                            style={mainScreenStyles.gradientButton}
                           >
                             <Ionicons 
                               name="sparkles" 
                               size={16} 
                               color={LuxuryColors.secondary} 
                             />
-                            <Text style={styles.aiButtonText}>
+                            <Text style={mainScreenStyles.aiButtonText}>
                               Use AI Price (${day.suggestedPrice})
                             </Text>
                           </LinearGradient>
                         </TouchableOpacity>
 
                         {/* Custom Price Input and Button */}
-                        <View style={styles.customPriceSection}>
+                        <View style={mainScreenStyles.customPriceSection}>
                           <TextInput
-                            style={styles.customPriceInput}
+                            style={mainScreenStyles.customPriceInput}
                             placeholder="Enter custom price"
                             placeholderTextColor={LuxuryColors.textLight}
                             value={customPrices[`custom_${index}`] || ''}
@@ -1391,14 +1369,14 @@ export default function MainScreen() {
                           />
                           <TouchableOpacity 
                             style={[
-                              styles.customButton,
+                              mainScreenStyles.customButton,
                               (!customPrices[`custom_${index}`] || isNaN(parseFloat(customPrices[`custom_${index}`]))) && { opacity: 0.5 }
                             ]}
                             onPress={() => handleUpdateCustomDayPrice(index, false)}
                             disabled={!customPrices[`custom_${index}`] || isNaN(parseFloat(customPrices[`custom_${index}`]))}
                             activeOpacity={0.8}
                           >
-                            <Text style={styles.customButtonText}>
+                            <Text style={mainScreenStyles.customButtonText}>
                               Update
                             </Text>
                           </TouchableOpacity>
@@ -1413,7 +1391,7 @@ export default function MainScreen() {
         </View>
 
         {/* Single Action Button */}
-        <View style={styles.actionSection}>
+        <View style={mainScreenStyles.actionSection}>
           <TouchableOpacity 
             activeOpacity={0.8}
             onPress={() => {
@@ -1426,9 +1404,9 @@ export default function MainScreen() {
           >
             <LinearGradient 
               colors={LuxuryColors.moneyGoldGradient as any}
-              style={styles.primaryButton}
+              style={mainScreenStyles.primaryButton}
             >
-              <Text style={styles.primaryButtonText}>
+              <Text style={mainScreenStyles.primaryButtonText}>
                 {loading ? 'Loading...' : 'Apply All AI Suggestions'}
               </Text>
             </LinearGradient>
@@ -1439,747 +1417,3 @@ export default function MainScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: LuxuryColors.background,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  goldOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: '40%',
-  },
-  splitDarkSection: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    width: '60%',
-    height: '100%',
-    opacity: 0.15,
-  },
-  goldTransition: {
-    position: 'absolute',
-    left: '45%',
-    top: 0,
-    width: '30%',
-    height: '100%',
-    opacity: 0.8,
-  },
-
-  eliteAccent: {
-    position: 'absolute',
-    top: -100,
-    right: -100,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: LuxuryColors.eliteAccentBg,
-    shadowColor: LuxuryColors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 50,
-    elevation: 8,
-  },
-  luxuryCorner: {
-    position: 'absolute',
-    bottom: -50,
-    left: -50,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    shadowColor: '#6B4E00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
-    elevation: 6,
-  },
-  safeArea: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-  },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: LuxuryColors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: LuxuryColors.border,
-    shadowColor: LuxuryColors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  refreshButtonLoading: {
-    opacity: 0.6,
-    borderColor: LuxuryColors.textLight,
-  },
-  refreshButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.accent,
-    marginLeft: 6,
-  },
-  refreshButtonTextLoading: {
-    color: LuxuryColors.textLight,
-  },
-  appName: {
-    fontSize: 32,
-          fontFamily: 'Inter-ExtraBold',
-    color: LuxuryColors.primary,
-    marginBottom: 2,
-    textShadowColor: 'rgba(212, 175, 55, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-
-  profileButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: LuxuryColors.accent,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileInitial: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.secondary,
-  },
-  propertyLocation: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-  },
-  pricingCard: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 28,
-    marginBottom: 32,
-    shadowColor: LuxuryColors.shadowDark,
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.6,
-    shadowRadius: 35,
-    elevation: 25,
-    borderWidth: 3,
-    borderColor: LuxuryColors.goldBorder,
-  },
-  pricingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  pricingTitle: {
-    fontSize: 20,
-    fontFamily: 'Inter-Bold',
-        color: LuxuryColors.secondary,
-  },
-  pricingGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  priceItem: {
-    alignItems: 'center',
-  },
-  priceValue: {
-    fontSize: 28,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.secondary,
-    marginBottom: 6,
-  },
-  suggestedPrice: {
-    color: LuxuryColors.accent,
-    fontSize: 32,
-  },
-  priceLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textLight,
-  },
-  suggestedLabel: {
-    color: LuxuryColors.accent,
-  },
-  section: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.primary,
-  },
-  dayContainer: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-  },
-  dayItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 2,
-    borderColor: '#B8860B',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
-  },
-  dayItemExpanded: {
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderBottomWidth: 0,
-  },
-  dayLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  dateInfo: {
-    marginRight: 20,
-    alignItems: 'center',
-    minWidth: 40,
-  },
-  dayName: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  dateNumber: {
-    fontSize: 24,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.accent,
-    marginTop: 2,
-  },
-  priceInfo: {
-    flex: 1,
-  },
-  priceFlow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  currentPrice: {
-    fontSize: 20,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-    marginRight: 8,
-  },
-  trendIcon: {
-    marginHorizontal: 6,
-  },
-  suggestedPriceHighlight: {
-    fontSize: 22,
-    fontFamily: 'Inter-Bold',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  goldGlow: {
-    color: LuxuryColors.accent,
-    backgroundColor: LuxuryColors.goldGlowBg,
-    shadowColor: LuxuryColors.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: LuxuryColors.goldGlowBorder,
-  },
-
-  expandedContent: {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-    marginTop: 0,
-    overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 2,
-    borderTopWidth: 0,
-    borderColor: '#B8860B',
-  },
-  aiTakeCard: {
-    padding: 20,
-    borderRadius: 16,
-    margin: 16,
-    marginBottom: 8,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 15,
-    elevation: 10,
-    borderWidth: 2,
-    borderColor: '#B8860B',
-  },
-  aiTakeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  aiTakeTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.accent,
-    marginLeft: 8,
-  },
-  aiTakeText: {
-    fontSize: 15,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-    lineHeight: 22,
-  },
-  quickStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 8,
-  },
-  statItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 20,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.primary,
-    marginBottom: 4,
-  },
-  suggestedStat: {
-    color: LuxuryColors.accent,
-  },
-  statLabel: {
-    fontSize: 11,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-  },
-  suggestedStatLabel: {
-    color: LuxuryColors.accent,
-  },
-  actionSection: {
-    paddingHorizontal: 20,
-    paddingTop: 32,
-    paddingBottom: 40,
-  },
-  primaryButton: {
-    borderRadius: 16,
-    paddingVertical: 22,
-    alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.5,
-    shadowRadius: 25,
-    elevation: 20,
-    borderWidth: 2,
-    borderColor: '#6B4E00',
-  },
-  primaryButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.secondary,
-  },
-  // Loading skeleton styles
-  skeletonText: {
-    backgroundColor: LuxuryColors.border,
-    borderRadius: 4,
-  },
-  skeletonSmall: {
-    width: 40,
-    height: 12,
-    marginVertical: 2,
-  },
-  skeletonMedium: {
-    width: 80,
-    height: 16,
-    marginVertical: 2,
-  },
-  skeletonLarge: {
-    width: 120,
-    height: 20,
-    marginVertical: 2,
-  },
-  // Loading screen styles
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  loadingTextContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-    marginLeft: 12,
-  },
-  // Simple loading dots styles
-  loadingDotsContainer: {
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 8,
-    paddingVertical: 8,
-  },
-  loadingDotsText: {
-    fontSize: 18,
-    color: LuxuryColors.accent,
-    fontFamily: 'Inter-Medium',
-    letterSpacing: 4,
-  },
-  loadingIndicatorText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textLight,
-    textAlign: 'center',
-    marginBottom: 12,
-    marginTop: 4,
-  },
-  updateSection: {
-    padding: 20,
-    borderRadius: 16,
-    marginTop: 16,
-    marginBottom: 20,
-    backgroundColor: LuxuryColors.surface,
-  },
-  updateSectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.primary,
-    marginBottom: 16,
-  },
-  updateButton: {
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: LuxuryColors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  updateButtonDisabled: {
-    opacity: 0.6,
-  },
-  aiUpdateButton: {
-    // Style applied via LinearGradient
-  },
-  customUpdateButton: {
-    // Style applied via LinearGradient
-    marginBottom: 0,
-    height: 48,
-  },
-  customPriceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  customPriceInputDisabled: {
-    backgroundColor: LuxuryColors.surfaceDark,
-    opacity: 0.6,
-  },
-  updateButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    minWidth: 120,
-  },
-  updateButtonIcon: {
-    marginRight: 8,
-  },
-  updateButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-  },
-  aiUpdateButtonText: {
-    color: LuxuryColors.secondary,
-  },
-  customUpdateButtonText: {
-    color: LuxuryColors.accent,
-  },
-  // Error state styles
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  errorButtonContainer: {
-    marginTop: 32,
-    width: '100%',
-    maxWidth: 280,
-  },
-  secondaryButton: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: LuxuryColors.accent,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.accent,
-  },
-  customWindowSection: {
-    marginTop: 40,
-    marginBottom: 20,
-  },
-  customWindowHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  toggleButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: LuxuryColors.goldGlowBg,
-  },
-  customWindowContent: {
-    paddingHorizontal: 20,
-  },
-  dateSelectionSummary: {
-    backgroundColor: LuxuryColors.surface + '20',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: LuxuryColors.accent + '30',
-  },
-  selectorLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-    marginBottom: 4,
-  },
-  selectedDatesRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  dateDisplay: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  dateDisplayLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-    marginBottom: 4,
-  },
-  dateDisplayValue: {
-    fontSize: 16,
-    fontFamily: 'Inter-Bold',
-    color: LuxuryColors.accent,
-  },
-  dateRangeSummary: {
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: LuxuryColors.accent + '20',
-  },
-  dateRangeSummaryText: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-  },
-  clearButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: LuxuryColors.textLight + '20',
-  },
-  clearButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-  },
-  calendarToggleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: LuxuryColors.goldGlowBg,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: LuxuryColors.accent + '30',
-  },
-  calendarToggleText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.accent,
-    marginHorizontal: 8,
-  },
-  calendarContainer: {
-    backgroundColor: LuxuryColors.surface,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: LuxuryColors.accent + '30',
-    shadowColor: LuxuryColors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  calendar: {
-    borderRadius: 12,
-  },
-  calendarInstruction: {
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.textSecondary,
-    textAlign: 'center',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: LuxuryColors.accent + '20',
-  },
-  loadCustomButton: {
-    backgroundColor: LuxuryColors.accent,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: LuxuryColors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  loadingButton: {
-    backgroundColor: LuxuryColors.textLight,
-  },
-  loadButtonText: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.surface,
-    marginLeft: 8,
-  },
-  loadingButtonText: {
-    color: LuxuryColors.textSecondary,
-  },
-  customDaysTitleContainer: {
-    backgroundColor: LuxuryColors.surface + '20',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: LuxuryColors.accent + '20',
-  },
-  customDaysTitle: {
-    fontSize: 16,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.textSecondary,
-    textAlign: 'center',
-  },
-  actionButtons: {
-    gap: 12,
-    marginTop: 16,
-  },
-  actionButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  aiButton: {
-    marginBottom: 8,
-  },
-  gradientButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  aiButtonText: {
-    fontSize: 14,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.surface,
-    marginLeft: 6,
-  },
-  customPriceSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  customPriceInput: {
-    flex: 1,
-    backgroundColor: LuxuryColors.surface + '20',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: LuxuryColors.text,
-    borderWidth: 1,
-    borderColor: LuxuryColors.accent + '30',
-  },
-  customButton: {
-    backgroundColor: LuxuryColors.accent + '20',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: LuxuryColors.accent,
-  },
-  customButtonText: {
-    fontSize: 12,
-    fontFamily: 'Inter-SemiBold',
-    color: LuxuryColors.accent,
-  },
-});
