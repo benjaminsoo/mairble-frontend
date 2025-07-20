@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mairble.beta",
+      "bundleIdentifier": "com.mairble.alpha",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
