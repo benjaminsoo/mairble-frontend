@@ -309,12 +309,16 @@ export class ApiService {
         property_context: propertyContext ? {
           mainGuest: propertyContext.mainGuest,
           specialFeature: propertyContext.specialFeature,
-          pricingGoal: propertyContext.pricingGoal
+          pricingGoal: propertyContext.pricingGoal,
+          specialFeatureDetails: propertyContext.specialFeatureDetails
         } : null
       };
       
       if (propertyContext) {
         console.log('📝 Including property context in chat request');
+        if (propertyContext.specialFeatureDetails && Object.keys(propertyContext.specialFeatureDetails).length > 0) {
+          console.log('🎯 Custom feature details found:', propertyContext.specialFeatureDetails);
+        }
       }
       
       const response = await fetch(`${API_BASE_URL}/chat`, {
