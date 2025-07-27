@@ -5,21 +5,24 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function ContextSetupScreen() {
   const [mainGuest, setMainGuest] = useState('');
   const [specialFeature, setSpecialFeature] = useState<string[]>([]);
   const [pricingGoal, setPricingGoal] = useState<string[]>([]);
+  // New: State for custom feature descriptions
+  const [specialFeatureDetails, setSpecialFeatureDetails] = useState<{ [key: string]: string }>({});
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isEditing, setIsEditing] = useState(false);
@@ -35,6 +38,7 @@ export default function ContextSetupScreen() {
         setMainGuest(existingContext.mainGuest);
         setSpecialFeature(existingContext.specialFeature || []);
         setPricingGoal(existingContext.pricingGoal || []);
+        setSpecialFeatureDetails(existingContext.specialFeatureDetails || {});
         setIsEditing(true);
       }
     } catch (error) {
@@ -72,6 +76,7 @@ export default function ContextSetupScreen() {
         mainGuest: mainGuest.trim(),
         specialFeature: specialFeature,
         pricingGoal: pricingGoal,
+        specialFeatureDetails: specialFeatureDetails,
         createdAt: new Date().toISOString(),
       };
 
@@ -155,53 +160,98 @@ export default function ContextSetupScreen() {
     </TouchableOpacity>
   );
 
-  const renderMultiSelectOption = (value: string, selectedValues: string[], onToggle: (value: string) => void, label: string, description?: string) => {
+  const getPlaceholderForFeature = (featureType: string): string => {
+    const placeholders: { [key: string]: string } = {
+      'Location': 'e.g. Beachfront with ocean views',
+      'Unique Amenity': 'e.g. Heated pool and hot tub',
+      'Size/Capacity': 'e.g. Sleeps 12 in 5 bedrooms',
+      'Luxury/Design': 'e.g. Modern renovation with high-end finishes',
+      'Pet-Friendly': 'e.g. Fenced yard and pet amenities',
+      'Exceptional View': 'e.g. Panoramic mountain views',
+      'Unique Experience': 'e.g. Historic Victorian mansion'
+    };
+    return placeholders[featureType] || 'e.g. Describe what makes this special';
+  };
+
+  const renderMultiSelectOption = (value: string, selectedValues: string[], onToggle: (value: string) => void, label: string, description?: string, showCustomInput: boolean = false) => {
     const isSelected = selectedValues.includes(value);
     
     return (
-      <TouchableOpacity
-        key={value}
-        style={[
-          styles.dropdownOption,
-          isSelected && styles.dropdownOptionSelected
-        ]}
-        onPress={() => onToggle(value)}
-        disabled={loading}
-      >
-        <View style={styles.dropdownOptionContent}>
-          <View style={styles.dropdownOptionHeader}>
-            <View style={[
-              styles.checkboxButton,
-              isSelected && styles.checkboxButtonSelected
-            ]}>
-              {isSelected && <Ionicons name="checkmark" size={14} color={LuxuryColors.secondary} />}
+      <View key={value}>
+        <TouchableOpacity
+          style={[
+            styles.dropdownOption,
+            isSelected && styles.dropdownOptionSelected
+          ]}
+          onPress={() => onToggle(value)}
+          disabled={loading}
+        >
+          <View style={styles.dropdownOptionContent}>
+            <View style={styles.dropdownOptionHeader}>
+              <View style={[
+                styles.checkboxButton,
+                isSelected && styles.checkboxButtonSelected
+              ]}>
+                {isSelected && <Ionicons name="checkmark" size={14} color={LuxuryColors.secondary} />}
+              </View>
+              <Text style={[
+                styles.dropdownOptionLabel,
+                isSelected && styles.dropdownOptionLabelSelected
+              ]}>
+                {label}
+              </Text>
             </View>
-            <Text style={[
-              styles.dropdownOptionLabel,
-              isSelected && styles.dropdownOptionLabelSelected
-            ]}>
-              {label}
+            {description && (
+              <Text style={[
+                styles.dropdownOptionDescription,
+                isSelected && styles.dropdownOptionDescriptionSelected
+              ]}>
+                {description}
+              </Text>
+            )}
+          </View>
+        </TouchableOpacity>
+        
+        {/* Custom input field for selected competitive advantages */}
+        {isSelected && showCustomInput && (
+          <View style={styles.customInputContainer}>
+            <Text style={styles.customInputLabel}>
+              Describe your {value.toLowerCase()}:
+            </Text>
+            <TextInput
+              style={styles.customInput}
+              value={specialFeatureDetails[value] || ''}
+              onChangeText={(text) => updateFeatureDetail(value, text)}
+              placeholder={getPlaceholderForFeature(value)}
+              placeholderTextColor={LuxuryColors.textSecondary}
+              multiline
+              numberOfLines={2}
+              maxLength={150}
+            />
+            <Text style={styles.customInputHelper}>
+              This will help the AI give much more specific pricing advice
             </Text>
           </View>
-          {description && (
-            <Text style={[
-              styles.dropdownOptionDescription,
-              isSelected && styles.dropdownOptionDescriptionSelected
-            ]}>
-              {description}
-            </Text>
-          )}
-        </View>
-      </TouchableOpacity>
+        )}
+      </View>
     );
   };
 
   const toggleSpecialFeature = (value: string) => {
-    setSpecialFeature(prev => 
-      prev.includes(value) 
-        ? prev.filter(item => item !== value)
-        : [...prev, value]
-    );
+    setSpecialFeature(prev => {
+      const isCurrentlySelected = prev.includes(value);
+      if (isCurrentlySelected) {
+        // Remove from selected features and clear custom description
+        setSpecialFeatureDetails(detailsPrev => {
+          const { [value]: removed, ...rest } = detailsPrev;
+          return rest;
+        });
+        return prev.filter(item => item !== value);
+      } else {
+        // Add to selected features
+        return [...prev, value];
+      }
+    });
   };
 
   const togglePricingGoal = (value: string) => {
@@ -210,6 +260,13 @@ export default function ContextSetupScreen() {
         ? prev.filter(item => item !== value)
         : [...prev, value]
     );
+  };
+
+  const updateFeatureDetail = (feature: string, detail: string) => {
+    setSpecialFeatureDetails(prev => ({
+      ...prev,
+      [feature]: detail
+    }));
   };
 
   const renderQuestion = () => {
@@ -242,6 +299,13 @@ export default function ContextSetupScreen() {
                 'Groups',
                 'Highly sensitive to per-person cost, look for capacity and entertainment. Weekends and events are key.'
               )}
+              {renderSingleSelectOption(
+                'Balanced',
+                mainGuest,
+                setMainGuest,
+                'Balanced',
+                'Mix of leisure and business travelers. Flexible pricing approach that adapts to demand patterns and guest type.'
+              )}
             </View>
           </View>
         );
@@ -257,50 +321,57 @@ export default function ContextSetupScreen() {
                 'Location',
                 specialFeature,
                 toggleSpecialFeature,
-                'Location (e.g., Beachfront, Downtown, Mountain View)',
-                'Proximity to key attractions, natural beauty, or urban convenience. This is often the #1 driver for guests.'
+                'Location',
+                'e.g. Beachfront with ocean views',
+                true
               )}
               {renderMultiSelectOption(
                 'Unique Amenity',
                 specialFeature,
                 toggleSpecialFeature,
-                'Unique Amenity (e.g., Hot Tub, Pool, Sauna, Home Theater)',
-                'Specific features that are rare or highly desirable in your market, justifying a premium.'
+                'Unique Amenity',
+                'e.g. Heated pool and hot tub',
+                true
               )}
               {renderMultiSelectOption(
                 'Size/Capacity',
                 specialFeature,
                 toggleSpecialFeature,
-                'Size/Capacity (e.g., Sleeps 10+, Multiple Bedrooms/Baths)',
-                'Ability to accommodate larger groups, which often means higher per-night rates and less competition.'
+                'Size/Capacity',
+                'e.g. Sleeps 12 in 5 bedrooms',
+                true
               )}
               {renderMultiSelectOption(
                 'Luxury/Design',
                 specialFeature,
                 toggleSpecialFeature,
-                'Luxury/Design (e.g., High-end finishes, Architecturally unique)',
-                'Premium aesthetic and comfort that appeals to discerning guests willing to pay more.'
+                'Luxury/Design',
+                'e.g. Modern renovation with high-end finishes',
+                true
               )}
               {renderMultiSelectOption(
                 'Pet-Friendly',
                 specialFeature,
                 toggleSpecialFeature,
-                'Pet-Friendly (with specific features like fenced yard)',
-                'Taps into a specific, often underserved market segment willing to pay a premium for their pets.'
+                'Pet-Friendly',
+                'e.g. Fenced yard and pet amenities',
+                true
               )}
               {renderMultiSelectOption(
                 'Exceptional View',
                 specialFeature,
                 toggleSpecialFeature,
-                'Exceptional View (e.g., Ocean, City Skyline, Mountain Panorama)',
-                'A visual appeal that significantly enhances the guest experience and justifies higher rates.'
+                'Exceptional View',
+                'e.g. Panoramic mountain views',
+                true
               )}
               {renderMultiSelectOption(
                 'Unique Experience',
                 specialFeature,
                 toggleSpecialFeature,
-                'Unique Experience (e.g., Historic property, Farm stay, Glamping)',
-                'Offers something truly different that guests can\'t find elsewhere, creating strong demand.'
+                'Unique Experience',
+                'e.g. Historic Victorian mansion',
+                true
               )}
             </View>
           </View>
@@ -694,5 +765,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-Medium',
     color: LuxuryColors.textSecondary,
+  },
+  // New styles for custom feature input
+  customInputContainer: {
+    marginTop: 12,
+    marginLeft: 32,
+    marginRight: 16,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 134, 11, 0.2)',
+  },
+  customInputLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter-SemiBold',
+    color: LuxuryColors.accent,
+    marginBottom: 8,
+  },
+  customInput: {
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.text,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 134, 11, 0.3)',
+    minHeight: 60,
+    textAlignVertical: 'top',
+  },
+  customInputHelper: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: LuxuryColors.textSecondary,
+    marginTop: 6,
+    fontStyle: 'italic',
   },
 }); 

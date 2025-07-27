@@ -15,6 +15,8 @@ export interface PropertyContext {
   mainGuest: string;  // Answer to "Who is your main guest?" (Leisure/Business/Groups) - single select
   specialFeature: string[];  // Answer to "What makes your property special?" - multiple select
   pricingGoal: string[];  // Answer to "What's your top pricing goal?" - multiple select
+  // New: Custom descriptions for selected features
+  specialFeatureDetails?: { [key: string]: string };  // Optional custom descriptions for each selected feature
   createdAt: string;  // Timestamp
 }
 
