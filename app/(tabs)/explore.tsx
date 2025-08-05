@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Markdown from 'react-native-markdown-display';
 
 interface Message {
   id: string;
@@ -17,7 +18,18 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Hello! I'm your AI property assistant. I can help you with pricing strategies, guest management, and property optimization. What would you like to discuss?",
+      text: `### Welcome! 🎯
+
+I'm your **AI property assistant** for short-term rental optimization. I can help you with:
+
+- **Pricing strategies** and market analysis
+- **Guest management** and targeting  
+- **Property optimization** recommendations
+- **Revenue forecasting** and availability planning
+
+> **Ready to maximize your property's potential?** Ask me about pricing, availability, or any property management questions!
+
+What would you like to discuss today?`,
       isUser: false,
       timestamp: new Date()
     }
@@ -217,9 +229,113 @@ export default function ChatScreen() {
         </View>
       )}
       <View style={[styles.messageBubble, message.isUser ? styles.userBubble : styles.aiBubble]}>
-        <Text style={[styles.messageText, message.isUser ? styles.userText : styles.aiText]}>
+        <Markdown
+          style={{
+            body: {
+              fontSize: 16,
+              lineHeight: 22,
+              fontFamily: 'Inter-Medium',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.text,
+            },
+            heading1: {
+              fontSize: 20,
+              fontFamily: 'Inter-Bold',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.primary,
+              marginBottom: 8,
+            },
+            heading2: {
+              fontSize: 18,
+              fontFamily: 'Inter-Bold', 
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.primary,
+              marginBottom: 6,
+            },
+            heading3: {
+              fontSize: 16,
+              fontFamily: 'Inter-Bold',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.primary,
+              marginBottom: 4,
+            },
+            paragraph: {
+              fontSize: 16,
+              lineHeight: 22,
+              fontFamily: 'Inter-Medium',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.text,
+              marginBottom: 8,
+            },
+            strong: {
+              fontFamily: 'Inter-Bold',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.accent,
+            },
+            code_inline: {
+              fontSize: 14,
+              fontFamily: 'Inter-Medium',
+              backgroundColor: 'rgba(184, 134, 11, 0.1)',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.accent,
+              paddingHorizontal: 4,
+              paddingVertical: 2,
+              borderRadius: 4,
+            },
+            code_block: {
+              fontSize: 14,
+              fontFamily: 'Inter-Medium',
+              backgroundColor: 'rgba(184, 134, 11, 0.1)',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.text,
+              padding: 12,
+              borderRadius: 8,
+              marginVertical: 8,
+            },
+            bullet_list: {
+              marginBottom: 8,
+            },
+            ordered_list: {
+              marginBottom: 8,
+            },
+            list_item: {
+              fontSize: 16,
+              lineHeight: 22,
+              fontFamily: 'Inter-Medium',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.text,
+              marginBottom: 4,
+            },
+            blockquote: {
+              backgroundColor: 'rgba(184, 134, 11, 0.05)',
+              borderLeftWidth: 4,
+              borderLeftColor: LuxuryColors.accent,
+              paddingLeft: 12,
+              paddingVertical: 8,
+              marginVertical: 8,
+              fontStyle: 'italic',
+            },
+            hr: {
+              backgroundColor: 'rgba(184, 134, 11, 0.2)',
+              height: 1,
+              marginVertical: 12,
+            },
+            table: {
+              borderWidth: 1,
+              borderColor: 'rgba(184, 134, 11, 0.2)',
+              borderRadius: 8,
+              marginVertical: 8,
+            },
+            thead: {
+              backgroundColor: 'rgba(184, 134, 11, 0.1)',
+            },
+            th: {
+              fontSize: 14,
+              fontFamily: 'Inter-Bold',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.primary,
+              padding: 8,
+            },
+            td: {
+              fontSize: 14,
+              fontFamily: 'Inter-Medium',
+              color: message.isUser ? LuxuryColors.secondary : LuxuryColors.text,
+              padding: 8,
+            },
+          }}
+        >
           {message.text}
-        </Text>
+        </Markdown>
       </View>
     </View>
   );
