@@ -29,6 +29,44 @@ export interface NightData {
   seasonal_profile?: string;  // Seasonal context (e.g., "BusyAugust")
 }
 
+export interface ListingData {
+  id: string;
+  pms: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  country: string;
+  city_name: string;
+  state: string;
+  no_of_bedrooms: number;
+  min: number;
+  base: number;
+  max: number;
+  group: string;
+  subgroup: string;
+  tags: string;
+  notes: string;
+  isHidden: boolean;
+  push_enabled: boolean;
+  occupancy_next_7: number;
+  market_occupancy_next_7: number;
+  occupancy_next_30: number;
+  market_occupancy_next_30: number;
+  occupancy_next_60: number;
+  market_occupancy_next_60: number;
+  occupancy_past_90: number;
+  market_occupancy_past_90: number;
+  revenue_past_7: string;
+  stly_revenue_past_7: number;
+  recommended_base_price: number;
+  last_date_pushed: string;
+  last_refreshed_at: string;
+}
+
+export interface ListingsResponse {
+  listings: ListingData[];
+}
+
 export interface AIResult {
   date: string;
   suggested_price?: number;
@@ -115,18 +153,31 @@ export class ApiService {
       // Get API configuration
       const config = await this.getApiConfig();
       
+      // Get selected property for listing ID
+      const { SecureStorageService } = await import('./storage');
+      const selectedProperty = await SecureStorageService.getSelectedProperty();
+      
+      // Require selected property ID 
+      const listingId = selectedProperty?.id;
+      
+      if (!listingId) {
+        throw new Error('No property selected. Please select a property first.');
+      }
+      
       // First, ensure we can connect to the backend
       await this.findWorkingBackendUrl();
       
       const requestBody = {
         api_key: config.priceLabs.apiKey,
-        listing_id: config.priceLabs.listingId,
-        pms: config.priceLabs.pms || 'airbnb'
+        listing_id: listingId,
+        pms: config.priceLabs.pms || 'airbnb',
+        selected_property: selectedProperty
       };
 
-      console.log('📤 Sending request with user API key:', {
+      console.log('📤 Sending request:', {
         ...requestBody,
-        api_key: `${requestBody.api_key.substring(0, 10)}...` // Log only first 10 chars
+        api_key: `${requestBody.api_key.substring(0, 10)}...`, // Log only first 10 chars
+        listing_id: selectedProperty ? `${selectedProperty.name} (${listingId})` : listingId
       });
 
       const response = await fetch(`${API_BASE_URL}/fetch-pricing-data`, {
@@ -176,20 +227,33 @@ export class ApiService {
       // Get API configuration
       const config = await this.getApiConfig();
       
+      // Get selected property for listing ID
+      const { SecureStorageService } = await import('./storage');
+      const selectedProperty = await SecureStorageService.getSelectedProperty();
+      
+      // Require selected property ID
+      const listingId = selectedProperty?.id;
+      
+      if (!listingId) {
+        throw new Error('No property selected. Please select a property first.');
+      }
+      
       // First, ensure we can connect to the backend
       await this.findWorkingBackendUrl();
       
       const requestBody = {
         api_key: config.priceLabs.apiKey,
-        listing_id: config.priceLabs.listingId,
+        listing_id: listingId,
         pms: config.priceLabs.pms || 'airbnb',
         date_from: dateFrom,
-        date_to: dateTo
+        date_to: dateTo,
+        selected_property: selectedProperty
       };
 
       console.log('📤 Sending custom range request:', {
         ...requestBody,
-        api_key: `${requestBody.api_key.substring(0, 10)}...` // Log only first 10 chars
+        api_key: `${requestBody.api_key.substring(0, 10)}...`,
+        listing_id: selectedProperty ? `${selectedProperty.name} (${listingId})` : listingId
       });
 
       const response = await fetch(`${API_BASE_URL}/fetch-pricing-data`, {
@@ -243,10 +307,25 @@ export class ApiService {
       
       console.log(`🔗 Using backend URL: ${API_BASE_URL}`);
       
+      // Get selected property context for AI analysis
+      const { SecureStorageService } = await import('./storage');
+      const selectedProperty = await SecureStorageService.getSelectedProperty();
+      
       const requestBody = {
         nights: nights,
-        model: 'gpt-4'
+        model: 'gpt-4',
+        selected_property: selectedProperty ? {
+          id: selectedProperty.id,
+          name: selectedProperty.name,
+          location: selectedProperty.location,
+          no_of_bedrooms: selectedProperty.no_of_bedrooms
+        } : null
       };
+      
+      if (selectedProperty) {
+        console.log(`🏠 Including property info in AI analysis: ${selectedProperty.name} (${selectedProperty.no_of_bedrooms} bedrooms)`);
+      }
+      
       console.log('📤 Sending AI analysis request:', JSON.stringify(requestBody, null, 2));
       
       const response = await fetch(`${API_BASE_URL}/analyze-pricing`, {
@@ -302,6 +381,7 @@ export class ApiService {
       // Get property context for personalized responses  
       const { SecureStorageService } = await import('./storage');
       const propertyContext = await SecureStorageService.getPropertyContext();
+      const selectedProperty = await SecureStorageService.getSelectedProperty();
       
       const requestBody = {
         message: message,
@@ -311,6 +391,12 @@ export class ApiService {
           specialFeature: propertyContext.specialFeature,
           pricingGoal: propertyContext.pricingGoal,
           specialFeatureDetails: propertyContext.specialFeatureDetails
+        } : null,
+        selected_property: selectedProperty ? {
+          id: selectedProperty.id,
+          name: selectedProperty.name,
+          location: selectedProperty.location,
+          no_of_bedrooms: selectedProperty.no_of_bedrooms
         } : null
       };
       
@@ -319,6 +405,10 @@ export class ApiService {
         if (propertyContext.specialFeatureDetails && Object.keys(propertyContext.specialFeatureDetails).length > 0) {
           console.log('🎯 Custom feature details found:', propertyContext.specialFeatureDetails);
         }
+      }
+      
+      if (selectedProperty) {
+        console.log(`🏠 Including selected property: ${selectedProperty.name} (${selectedProperty.no_of_bedrooms} bedrooms)`);
       }
       
       const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -480,16 +570,15 @@ export class ApiService {
   }
 
   // Utility method to get current API configuration status
-  static async getApiStatus(): Promise<{ configured: boolean; hasListingId: boolean; pms: string | null }> {
+  static async getApiStatus(): Promise<{ configured: boolean; pms: string | null }> {
     try {
       const config = await SecureStorageService.getApiConfig();
       return {
         configured: !!(config?.priceLabs?.apiKey?.trim()),
-        hasListingId: !!(config?.priceLabs?.listingId?.trim()),
         pms: config?.priceLabs?.pms || null
       };
     } catch (error) {
-      return { configured: false, hasListingId: false, pms: null };
+      return { configured: false, pms: null };
     }
   }
 
@@ -501,9 +590,16 @@ export class ApiService {
       // Get API configuration
       const config = await this.getApiConfig();
       
+      // Get selected property for listing ID
+      const { SecureStorageService } = await import('./storage');
+      const selectedProperty = await SecureStorageService.getSelectedProperty();
+      
+      // Require selected property ID
+      const listingId = selectedProperty?.id;
+      
       // Validate required configuration
-      if (!config.priceLabs.listingId) {
-        throw new Error('Listing ID not configured. Please set up your Listing ID in the app settings.');
+      if (!listingId) {
+        throw new Error('No property selected. Please select a property first.');
       }
       
       // Ensure we're using the working backend URL
@@ -513,25 +609,20 @@ export class ApiService {
       
       const requestBody = {
         api_key: config.priceLabs.apiKey,
-        listing_id: config.priceLabs.listingId,
+        listing_id: listingId,
         pms: config.priceLabs.pms || 'airbnb',
         date: request.date,
         price: request.price,
         price_type: request.price_type || 'fixed',
         currency: request.currency || 'USD',
         update_children: request.update_children || false,
-        reason: 'Manual update via mAIrble'
       };
 
-      // Additional validation before sending
-      if (!requestBody.listing_id) {
-        throw new Error('Listing ID is required but not configured. Please check your app settings.');
-      }
-
-      console.log('📤 Sending single price update request:', {
+      // Log request details (without exposing the full API key)
+      console.log('📤 Sending price update request:', {
         ...requestBody,
         api_key: `${requestBody.api_key.substring(0, 10)}...`, // Log only first 10 chars
-        listing_id: requestBody.listing_id ? `${requestBody.listing_id.substring(0, 8)}...` : 'MISSING'
+        listing_id: selectedProperty ? `${selectedProperty.name} (${listingId})` : listingId
       });
 
       const response = await fetch(`${API_BASE_URL}/update-single-price`, {
@@ -576,6 +667,52 @@ export class ApiService {
     } catch (error) {
       console.error('❌ CRITICAL ERROR in single price update:', error);
       console.error('❌ Error details:', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  static async fetchListings(): Promise<ListingsResponse> {
+    try {
+      console.log('🏠 Fetching user property listings...');
+      
+      // Ensure we're using the working backend URL
+      if (!API_BASE_URL) {
+        await this.findWorkingBackendUrl();
+      }
+      
+      const apiConfig = await this.getApiConfig();
+      if (!apiConfig) {
+        throw new Error('API configuration not found. Please set up your PriceLabs API key in Settings.');
+      }
+
+      const requestBody = {
+        api_key: apiConfig.priceLabs.apiKey,
+      };
+
+      console.log('🔗 Requesting listings from backend...');
+      const response = await fetch(`${API_BASE_URL}/listings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log(`📥 Listings response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Listings request failed:`, errorText);
+        throw new Error(`Failed to fetch listings: ${response.status} ${response.statusText}`);
+      }
+
+      const data: ListingsResponse = await response.json();
+      console.log(`✅ Successfully fetched ${data.listings.length} property listings`);
+      
+      return data;
+      
+    } catch (error) {
+      console.error('❌ Error fetching listings:', error);
       throw error;
     }
   }

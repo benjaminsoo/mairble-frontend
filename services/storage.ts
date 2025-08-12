@@ -3,7 +3,6 @@ import * as SecureStore from 'expo-secure-store';
 export interface ApiConfig {
   priceLabs: {
     apiKey: string;
-    listingId?: string;
     pms?: string;
   };
   openAI?: {
@@ -20,9 +19,18 @@ export interface PropertyContext {
   createdAt: string;  // Timestamp
 }
 
+export interface SelectedProperty {
+  id: string;
+  name: string;
+  location: string;  // combination of city_name and state
+  no_of_bedrooms: number;
+  selectedAt: string;  // Timestamp when selected
+}
+
 const STORAGE_KEYS = {
   API_CONFIG: 'api_config',
   PROPERTY_CONTEXT: 'property_context',
+  SELECTED_PROPERTY: 'selected_property',
 } as const;
 
 export class SecureStorageService {
@@ -130,14 +138,13 @@ export class SecureStorageService {
   /**
    * Update just the PriceLabs API key
    */
-  static async updatePriceLabsApiKey(apiKey: string, listingId?: string, pms?: string): Promise<void> {
+  static async updatePriceLabsApiKey(apiKey: string, pms?: string): Promise<void> {
     try {
       const existingConfig = await this.getApiConfig() || { priceLabs: { apiKey: '' } };
       const updatedConfig: ApiConfig = {
         ...existingConfig,
         priceLabs: {
           apiKey: apiKey.trim(),
-          listingId: listingId?.trim() || existingConfig.priceLabs?.listingId,
           pms: pms?.trim() || existingConfig.priceLabs?.pms || 'airbnb',
         }
       };
@@ -245,6 +252,64 @@ export class SecureStorageService {
     } catch (error) {
       console.error('❌ Failed to clear property context:', error);
       throw new Error('Failed to clear property context');
+    }
+  }
+
+  /**
+   * Store selected property information
+   */
+  static async storeSelectedProperty(property: SelectedProperty): Promise<void> {
+    try {
+      const propertyString = JSON.stringify(property);
+      await SecureStore.setItemAsync(STORAGE_KEYS.SELECTED_PROPERTY, propertyString);
+      console.log(`✅ Selected property stored: ${property.name}`);
+    } catch (error) {
+      console.error('❌ Failed to store selected property:', error);
+      throw new Error('Failed to store selected property');
+    }
+  }
+
+  /**
+   * Retrieve selected property information
+   */
+  static async getSelectedProperty(): Promise<SelectedProperty | null> {
+    try {
+      const propertyString = await SecureStore.getItemAsync(STORAGE_KEYS.SELECTED_PROPERTY);
+      if (!propertyString) {
+        return null;
+      }
+      
+      const property = JSON.parse(propertyString) as SelectedProperty;
+      console.log(`✅ Retrieved selected property: ${property.name}`);
+      return property;
+    } catch (error) {
+      console.error('❌ Failed to retrieve selected property:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a property is selected
+   */
+  static async isPropertySelected(): Promise<boolean> {
+    try {
+      const property = await this.getSelectedProperty();
+      return !!property?.id;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Clear selected property
+   */
+  static async clearSelectedProperty(): Promise<void> {
+    try {
+      await SecureStore.deleteItemAsync(STORAGE_KEYS.SELECTED_PROPERTY);
+      console.log('✅ Selected property cleared');
+    } catch (error) {
+      console.error('❌ Failed to clear selected property:', error);
+      throw new Error('Failed to clear selected property');
     }
   }
 } 

@@ -1,5 +1,7 @@
+import PropertyDropdown from '@/components/ui/PropertyDropdown';
 import { LuxuryColors } from '@/constants/Colors';
 import { AIResult, ApiService, NightData, SinglePriceUpdateRequest } from '@/services/api';
+import { SelectedProperty } from '@/services/storage';
 import { mainScreenStyles } from '@/styles/MainScreenStyles';
 import { AppData, CustomTimeWindowData, DayData } from '@/types/MainScreenTypes';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +19,7 @@ export default function MainScreen() {
   const [showSplash, setShowSplash] = useState(true);
   const [updatingDays, setUpdatingDays] = useState<Set<number>>(new Set());
   const [customPrices, setCustomPrices] = useState<{ [key: string]: string }>({});
+  const [selectedProperty, setSelectedProperty] = useState<SelectedProperty | null>(null);
   
   // Updated state for custom time window with calendar
   const [customWindow, setCustomWindow] = useState<CustomTimeWindowData>({
@@ -875,14 +878,23 @@ export default function MainScreen() {
         <ScrollView style={mainScreenStyles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Clean Header */}
         <View style={mainScreenStyles.header}>
-          <View>
+          <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={mainScreenStyles.appName}>mAIrble</Text>
-            <Text style={mainScreenStyles.propertyLocation}>{data.propertyName} • {data.location}</Text>
+            <PropertyDropdown 
+              onPropertySelect={(property: SelectedProperty) => {
+                setSelectedProperty(property);
+                // Reload data for the new property
+                loadData();
+              }}
+              style={{ marginTop: 2 }}
+            />
           </View>
           <TouchableOpacity style={mainScreenStyles.profileButton} onPress={() => router.push('/settings')}>
             <Text style={mainScreenStyles.profileInitial}>B</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Property Selector - REMOVED - now integrated in header */}
 
         {/* Current Pricing - Dark Elite Card */}
         <Animated.View style={{ opacity: loading ? 0.7 : fadeAnimation }}>

@@ -6,26 +6,25 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SettingsScreen() {
   const [apiKey, setApiKey] = useState('');
-  const [listingId, setListingId] = useState('');
   const [pms, setPms] = useState('airbnb');
   const [showApiKey, setShowApiKey] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [apiStatus, setApiStatus] = useState<{ configured: boolean; hasListingId: boolean; pms: string | null }>({ configured: false, hasListingId: false, pms: null });
+  const [apiStatus, setApiStatus] = useState<{ configured: boolean; pms: string | null }>({ configured: false, pms: null });
   const [contextConfigured, setContextConfigured] = useState(false);
 
   useEffect(() => {
@@ -41,7 +40,6 @@ export default function SettingsScreen() {
       
       if (config?.priceLabs) {
         setApiKey(config.priceLabs.apiKey || '');
-        setListingId(config.priceLabs.listingId || '');
         setPms(config.priceLabs.pms || 'airbnb');
       }
       
@@ -67,7 +65,7 @@ export default function SettingsScreen() {
     setSaving(true);
 
     try {
-      await SecureStorageService.updatePriceLabsApiKey(apiKey, listingId, pms);
+      await SecureStorageService.updatePriceLabsApiKey(apiKey, pms);
       
       // Refresh status
       const status = await ApiService.getApiStatus();
@@ -103,9 +101,8 @@ export default function SettingsScreen() {
             try {
               await SecureStorageService.clearApiConfig();
               setApiKey('');
-              setListingId('');
               setPms('airbnb');
-              setApiStatus({ configured: false, hasListingId: false, pms: null });
+              setApiStatus({ configured: false, pms: null });
               Alert.alert('Cleared', 'API configuration has been cleared.');
             } catch (error) {
               Alert.alert('Error', 'Failed to clear API configuration.');
@@ -130,9 +127,8 @@ export default function SettingsScreen() {
               await SecureStorageService.clearApiConfig();
               await SecureStorageService.clearPropertyContext();
               setApiKey('');
-              setListingId('');
               setPms('airbnb');
-              setApiStatus({ configured: false, hasListingId: false, pms: null });
+              setApiStatus({ configured: false, pms: null });
               setContextConfigured(false);
               Alert.alert('App Reset', 'All data cleared. Restart the app to see onboarding flow.');
             } catch (error) {
@@ -216,12 +212,6 @@ export default function SettingsScreen() {
                   <View style={styles.statusRow}>
                     <Text style={styles.statusLabel}>API Key:</Text>
                     <Text style={styles.statusValue}>{maskApiKey(apiKey)}</Text>
-                  </View>
-                  <View style={styles.statusRow}>
-                    <Text style={styles.statusLabel}>Listing ID:</Text>
-                    <Text style={styles.statusValue}>
-                      {apiStatus.hasListingId ? listingId : 'Not set (using default)'}
-                    </Text>
                   </View>
                   <View style={styles.statusRow}>
                     <Text style={styles.statusLabel}>PMS:</Text>
@@ -308,21 +298,6 @@ export default function SettingsScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Listing ID Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Listing ID (Optional)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={listingId}
-                  onChangeText={setListingId}
-                  placeholder="e.g., 21f49919-2f73-4b9e-88c1-f460a316a5bc"
-                  placeholderTextColor={LuxuryColors.textLight}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!saving}
-                />
               </View>
 
               {/* PMS Selection */}
@@ -569,7 +544,7 @@ const styles = StyleSheet.create({
     color: LuxuryColors.secondary,
   },
   pmsOptionTextSelected: {
-    color: LuxuryColors.secondary,
+    color: LuxuryColors.text,
   },
   actionsContainer: {
     gap: 16,

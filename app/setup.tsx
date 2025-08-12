@@ -19,7 +19,6 @@ import {
 
 export default function SetupScreen() {
   const [apiKey, setApiKey] = useState('');
-  const [listingId, setListingId] = useState('');
   const [pms, setPms] = useState('airbnb');
   const [loading, setLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -38,7 +37,7 @@ export default function SetupScreen() {
 
     try {
       // Save the API configuration
-      await SecureStorageService.updatePriceLabsApiKey(apiKey, listingId, pms);
+      await SecureStorageService.updatePriceLabsApiKey(apiKey, pms);
       
       Alert.alert(
         'Step 1 Complete!',
@@ -142,21 +141,6 @@ export default function SetupScreen() {
                     />
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              {/* Listing ID Input (Optional) */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Listing ID (Optional)</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={listingId}
-                  onChangeText={setListingId}
-                  placeholder="e.g., 21f49919-2f73-4b9e-88c1-f460a316a5bc"
-                  placeholderTextColor={LuxuryColors.textLight}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!loading}
-                />
               </View>
 
               {/* PMS Selection */}
