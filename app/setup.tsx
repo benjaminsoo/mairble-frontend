@@ -147,7 +147,7 @@ export default function SetupScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Property Management System</Text>
                 <View style={styles.pmsContainer}>
-                  {['airbnb', 'vrbo', 'yourporter', 'other'].map((option) => (
+                  {['airbnb', 'vrbo', 'yourporter', 'smartbnb'].map((option) => (
                     <TouchableOpacity
                       key={option}
                       style={[
