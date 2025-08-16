@@ -5,16 +5,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SetupScreen() {
@@ -147,7 +147,7 @@ export default function SetupScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Property Management System</Text>
                 <View style={styles.pmsContainer}>
-                  {['airbnb', 'vrbo', 'yourporter', 'smartbnb'].map((option) => (
+                  {['airbnb', 'vrbo', 'yourporter', 'smartbnb', 'ownerrez'].map((option) => (
                     <TouchableOpacity
                       key={option}
                       style={[
@@ -161,7 +161,7 @@ export default function SetupScreen() {
                         styles.pmsOptionText,
                         pms === option && styles.pmsOptionTextSelected
                       ]}>
-                        {option.charAt(0).toUpperCase() + option.slice(1)}
+                        {option === 'ownerrez' ? 'OwnerRez' : option.charAt(0).toUpperCase() + option.slice(1)}
                       </Text>
                     </TouchableOpacity>
                   ))}

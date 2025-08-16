@@ -304,7 +304,7 @@ export default function SettingsScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Property Management System</Text>
                 <View style={styles.pmsContainer}>
-                  {['airbnb', 'vrbo', 'yourporter', 'smartbnb'].map((option) => (
+                  {['airbnb', 'vrbo', 'yourporter', 'smartbnb', 'ownerrez'].map((option) => (
                     <TouchableOpacity
                       key={option}
                       style={[
@@ -318,7 +318,7 @@ export default function SettingsScreen() {
                         styles.pmsOptionText,
                         pms === option && styles.pmsOptionTextSelected
                       ]}>
-                        {option.charAt(0).toUpperCase() + option.slice(1)}
+                        {option === 'ownerrez' ? 'OwnerRez' : option.charAt(0).toUpperCase() + option.slice(1)}
                       </Text>
                     </TouchableOpacity>
                   ))}
