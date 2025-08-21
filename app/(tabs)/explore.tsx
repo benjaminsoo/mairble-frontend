@@ -1,3 +1,4 @@
+import PromptSuggestions from '@/components/PromptSuggestions';
 import { LuxuryColors } from '@/constants/Colors';
 import { ApiService } from '@/services/api';
 import { SecureStorageService } from '@/services/storage';
@@ -173,6 +174,15 @@ What would you like to discuss today?`,
       setIsLoading(false);
     }
   };
+
+  const handlePromptSelect = (prompt: string) => {
+    setInputText(prompt);
+    // Optionally auto-send the message
+    // sendMessage();
+  };
+
+  // Check if this is the initial state (only welcome message and no conversation ID)
+  const isInitialState = messages.length === 1 && !conversationId && messages[0].id === '1';
 
   const showConversationOptions = () => {
     Alert.alert(
@@ -393,6 +403,11 @@ What would you like to discuss today?`,
             )}
             
             {messages.map(renderMessage)}
+            
+            {/* Show prompt suggestions after the initial welcome message */}
+            {isInitialState && (
+              <PromptSuggestions onPromptSelect={handlePromptSelect} />
+            )}
             
             {isLoading && (
               <View style={[styles.messageContainer, styles.aiMessage]}>
