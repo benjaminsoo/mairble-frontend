@@ -11,6 +11,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 
+// Type for batch update parameters
+type BatchUpdateParams = {
+  days: DayData[];
+  setLoadingState: (loading: boolean) => void;
+  onSuccess: () => void;
+  contextLabel: string;
+};
+
 export default function MainScreen() {
   const [expandedDays, setExpandedDays] = useState<number[]>([]);
   const [appData, setAppData] = useState<AppData | null>(null);
@@ -20,6 +28,8 @@ export default function MainScreen() {
   const [updatingDays, setUpdatingDays] = useState<Set<number>>(new Set());
   const [customPrices, setCustomPrices] = useState<{ [key: string]: string }>({});
   const [selectedProperty, setSelectedProperty] = useState<SelectedProperty | null>(null);
+  const [isApplyingNext5Days, setIsApplyingNext5Days] = useState(false);
+  const [isApplyingCustomRange, setIsApplyingCustomRange] = useState(false);
   
   // Updated state for custom time window with calendar
   const [customWindow, setCustomWindow] = useState<CustomTimeWindowData>({
@@ -836,6 +846,154 @@ export default function MainScreen() {
     }
   };
 
+  // Core batch update logic - DRY principle applied
+  const executeBatchPriceUpdate = async ({
+    days,
+    setLoadingState,
+    onSuccess,
+    contextLabel
+  }: BatchUpdateParams): Promise<void> => {
+    try {
+      setLoadingState(true);
+      
+      const updates = days.map((day, index) => ({
+        dayIndex: index,
+        date: day.originalDate,
+        currentPrice: day.currentPrice,
+        suggestedPrice: day.suggestedPrice,
+        displayDate: day.date,
+        displayDay: day.day
+      }));
+
+      let successCount = 0;
+      const failedUpdates: string[] = [];
+
+      console.log(`🔄 Starting ${contextLabel} batch update of ${updates.length} prices...`);
+
+      // Process updates sequentially to avoid overwhelming the API
+      for (const update of updates) {
+        try {
+          console.log(`🔄 Updating ${update.displayDate} (${update.displayDay}) from $${update.currentPrice} to $${update.suggestedPrice}`);
+
+          const updateRequest: SinglePriceUpdateRequest = {
+            date: update.date,
+            price: update.suggestedPrice,
+            price_type: 'fixed',
+            currency: 'USD',
+            update_children: false
+          };
+
+          const result = await ApiService.updateSinglePrice(updateRequest);
+
+          if (result.success) {
+            successCount++;
+            console.log(`✅ Successfully updated ${update.displayDate}`);
+          } else {
+            failedUpdates.push(`${update.displayDate}: ${result.message || 'Unknown error'}`);
+            console.error(`❌ Failed to update ${update.displayDate}:`, result.message);
+          }
+
+          // Add delay between requests to respect API rate limits
+          if (update.dayIndex < updates.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          failedUpdates.push(`${update.displayDate}: ${errorMessage}`);
+          console.error(`❌ Error updating ${update.displayDate}:`, error);
+        }
+      }
+
+      // Show results with appropriate context
+      if (successCount === updates.length) {
+        Alert.alert(
+          'Success! 🎉',
+          `All ${successCount} ${contextLabel} prices updated successfully with AI suggestions!`,
+          [{ text: 'OK', onPress: onSuccess }]
+        );
+      } else if (successCount > 0) {
+        Alert.alert(
+          'Partial Success',
+          `${successCount} out of ${updates.length} ${contextLabel} prices updated successfully.\n\nFailed updates:\n${failedUpdates.join('\n')}`,
+          [{ text: 'OK', onPress: onSuccess }]
+        );
+      } else {
+        Alert.alert(
+          'Update Failed',
+          `No ${contextLabel} prices were updated. Errors:\n${failedUpdates.join('\n')}`,
+          [{ text: 'OK' }]
+        );
+      }
+
+    } catch (error) {
+      console.error(`❌ Critical error in ${contextLabel} batch update:`, error);
+      Alert.alert(
+        'Error',
+        error instanceof Error ? error.message : `An unexpected error occurred during ${contextLabel} batch update`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setLoadingState(false);
+    }
+  };
+
+  // Apply AI suggestions for next 5 days
+  const applyNext5DaysAISuggestions = async () => {
+    if (!appData?.nextFiveDays?.length) {
+      Alert.alert('No Data', 'No pricing data available to update.');
+      return;
+    }
+
+    const confirmMessage = `Apply AI suggestions to all ${appData.nextFiveDays.length} days?\n\nThis will update all prices in PriceLabs with AI recommendations.`;
+
+    Alert.alert(
+      'Apply AI Suggestions - Next 5 Days',
+      confirmMessage,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Apply All', 
+          style: 'default',
+          onPress: () => executeBatchPriceUpdate({
+            days: appData.nextFiveDays,
+            setLoadingState: setIsApplyingNext5Days,
+            onSuccess: loadData,
+            contextLabel: 'next 5 days'
+          })
+        }
+      ]
+    );
+  };
+
+  // Apply AI suggestions for custom date range
+  const applyCustomRangeAISuggestions = async () => {
+    if (!customWindow.days?.length) {
+      Alert.alert('No Data', 'No custom date range data available to update.');
+      return;
+    }
+
+    const confirmMessage = `Apply AI suggestions to all ${customWindow.days.length} days in your custom date range?\n\nThis will update all prices in PriceLabs with AI recommendations.`;
+
+    Alert.alert(
+      'Apply AI Suggestions - Custom Range',
+      confirmMessage,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Apply All', 
+          style: 'default',
+          onPress: () => executeBatchPriceUpdate({
+            days: customWindow.days,
+            setLoadingState: setIsApplyingCustomRange,
+            onSuccess: loadCustomTimeWindow,
+            contextLabel: 'custom range'
+          })
+        }
+      ]
+    );
+  };
+
   return (
     <View style={mainScreenStyles.container}>
       {/* High Contrast Background */}
@@ -1114,6 +1272,27 @@ export default function MainScreen() {
           </View>
             ))}
           </Animated.View>
+        )}
+
+        {/* Apply AI Suggestions Button for Next 5 Days */}
+        {!loading && appData && appData.nextFiveDays.length > 0 && (
+          <View style={mainScreenStyles.actionSection}>
+            <TouchableOpacity
+              style={[mainScreenStyles.loadCustomButton, (loading || isApplyingNext5Days) && mainScreenStyles.loadingButton]}
+              onPress={applyNext5DaysAISuggestions}
+              disabled={loading || isApplyingNext5Days}
+              activeOpacity={0.7}
+            >
+              <Ionicons 
+                name={isApplyingNext5Days ? "hourglass" : "sparkles"} 
+                size={18} 
+                color={isApplyingNext5Days ? LuxuryColors.textLight : LuxuryColors.surface} 
+              />
+              <Text style={[mainScreenStyles.loadButtonText, (loading || isApplyingNext5Days) && mainScreenStyles.loadingButtonText]}>
+                {isApplyingNext5Days ? 'Applying Changes...' : 'Apply All AI Suggestions'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Updated Custom Date Range Section with Calendar */}
@@ -1398,32 +1577,32 @@ export default function MainScreen() {
                   )}
                 </View>
               ))}
+
+              {/* Apply AI Suggestions Button for Custom Date Range */}
+              <View style={mainScreenStyles.actionSection}>
+                <TouchableOpacity
+                  style={[mainScreenStyles.loadCustomButton, (customWindow.isLoading || isApplyingCustomRange) && mainScreenStyles.loadingButton]}
+                  onPress={applyCustomRangeAISuggestions}
+                  disabled={customWindow.isLoading || isApplyingCustomRange}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons 
+                    name={isApplyingCustomRange ? "hourglass" : "sparkles"} 
+                    size={18} 
+                    color={isApplyingCustomRange ? LuxuryColors.textLight : LuxuryColors.surface} 
+                  />
+                  <Text style={[mainScreenStyles.loadButtonText, (customWindow.isLoading || isApplyingCustomRange) && mainScreenStyles.loadingButtonText]}>
+                    {isApplyingCustomRange ? 'Applying Changes...' : 'Apply All AI Suggestions'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </>
           )}
         </View>
 
-        {/* Single Action Button */}
-        <View style={mainScreenStyles.actionSection}>
-          <TouchableOpacity 
-            activeOpacity={0.8}
-            onPress={() => {
-              Alert.alert(
-                'Apply AI Suggestions',
-                'This will update your pricing based on AI recommendations. This feature will be available soon!',
-                [{ text: 'OK' }]
-              );
-            }}
-          >
-            <LinearGradient 
-              colors={LuxuryColors.moneyGoldGradient as any}
-              style={mainScreenStyles.primaryButton}
-            >
-              <Text style={mainScreenStyles.primaryButtonText}>
-                {loading ? 'Loading...' : 'Apply All AI Suggestions'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        {/* Bottom padding to prevent content cutoff */}
+        <View style={{ height: 80 }} />
+        
         </ScrollView>
       </SafeAreaView>
     </View>
